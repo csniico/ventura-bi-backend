@@ -14,17 +14,177 @@ datasource db {
 }
 
 model User {
+  id        String   @id @default(uuid())
+  googleId  String   @unique
+  email     String   @unique
+  firstname String?
+  lastname  String?
+  avatar    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // soft-delete
+  isDeleted Boolean?  @default(false)
+  deletedAt DateTime?
+
+  // Relations
+  devices       Device[]
+  sessions      Session[]
+  businessUsers BusinessUser[] // user can belong to multiple businesses
+  permissions   Permission[]   // user-specific permissions (override role permissions)
+  auditLogs     AuditLog[]     // compliance: track user actions
+
+  @@map("users")
+}
+
+model Business {
   id          String   @id @default(uuid())
-  googleId    String   @unique // from Google OAuth
-  email       String   @unique
-  firstname        String?
-  lastname        String?
-  avatar      String?
+  name        String
+  description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
+  businessUsers BusinessUser[] // business has multiple users
+  roles         Role[] // business defines its own roles
+  resources     Resource[] // business defines its own resources
+  permissions   Permission[] // all permissions in this business
+  auditLogs     AuditLog[]   // compliance: track business data access
 
-  @@map("users")
+  @@map("businesses")
+}
+
+model BusinessUser {
+  id         String   @id @default(uuid())
+  userId     String
+  businessId String
+  roleId     String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  role     Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, businessId]) // user can only be in a business once
+  @@map("business_users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String // 'Owner', 'Manager', 'Cashier'
+  description String?
+  isSystem    Boolean  @default(false) // true for Owner
+  businessId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessUsers BusinessUser[]
+  permissions   Permission[]   // role has multiple permissions
+
+  @@unique([name, businessId]) // role names unique per business
+  @@map("roles")
+}
+
+model Device{
+  id          String   @id @default(uuid())
+  deviceId    String   @unique
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  //Relations
+  sessions    Session[]
+
+  @@map("devices")
+}
+
+model Session{
+  id          String   @id @default(uuid())
+  sessionToken String  @unique
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  //Relations
+  device      Device?   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId    String?
+
+  @@map("sessions")
+}
+
+model Resource {
+  id          String   @id @default(uuid())
+  name        String // 'products', 'orders', 'users', 'reports'
+  description String?
+  businessId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  permissions Permission[]
+
+  @@unique([name, businessId]) // resource names unique per business
+  @@map("resources")
+}
+
+model Permission {
+  id          String         @id @default(uuid())
+  action      String // 'create', 'read', 'update', 'delete', 'manage'
+  effect      PermissionEffect @default(ALLOW) // 'ALLOW' or 'DENY'
+  resourceId  String
+  roleId      String? // optional: attached to role
+  userId      String? // optional: attached directly to user (overrides role)
+  businessId  String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  role     Role?    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([action, resourceId, roleId, userId, effect]) // prevent duplicate permissions
+  @@map("permissions")
+}
+
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+// Compliance: Audit trail for data access (Data Protection Act 843)
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  businessId  String
+  action      String // 'READ', 'CREATE', 'UPDATE', 'DELETE'
+  resource    String // 'users', 'products', 'orders'
+  resourceId  String? // specific record ID accessed
+  ipAddress   String?
+  userAgent   String?
+  status      String // 'SUCCESS', 'DENIED', 'ERROR'
+  metadata    Json? // additional context
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt]) // fast lookup by user
+  @@index([businessId, createdAt]) // fast lookup by business
+  @@index([resource, resourceId]) // fast lookup by resource
+  @@map("audit_logs")
 }

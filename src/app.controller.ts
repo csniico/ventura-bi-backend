@@ -1,4 +1,11 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 
-@Controller()
-export class AppController {}
+@ApiTags('root')
+@Controller('/')
+export class AppController {
+  @Get('')
+  getRoot(): string {
+    return 'Welcome to the Service API!';
+  }
+}

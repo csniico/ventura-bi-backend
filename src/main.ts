@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { PrismaClientExceptionFilter } from 'nestjs-prisma';
 import { ExpressAdapter } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -33,6 +34,15 @@ async function bootstrap() {
 
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter));
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Service')
+    .setDescription('The best application ever')
+    .setVersion('0.0.1')
+    .build();
+
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, swaggerDocument);
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('SERVER_PORT', 3000);

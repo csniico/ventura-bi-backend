@@ -6,6 +6,9 @@ import { ShutdownService } from './shutdown.service';
 import { PrismaService } from './prisma/prisma.service';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
 import { PrismaModule } from 'nestjs-prisma';
+import { PermissionModule } from './permission/permission.module';
+import { RoleService } from './role/role.service';
+import { RoleModule } from './role/role.module';
 
 @Module({
   imports: [
@@ -16,9 +19,11 @@ import { PrismaModule } from 'nestjs-prisma';
     PrismaModule.forRoot({
       isGlobal: true,
     }),
+    PermissionModule,
+    RoleModule,
   ],
   controllers: [AppController],
-  providers: [AppService, ShutdownService, PrismaService],
+  providers: [AppService, ShutdownService, PrismaService, RoleService],
 })
 export class AppModule {
   configure(consumer: import('@nestjs/common').MiddlewareConsumer): void {
