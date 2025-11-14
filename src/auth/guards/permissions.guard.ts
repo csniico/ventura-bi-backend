@@ -1,4 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PermissionService } from '../../permission/permission.service';
 import { PERMISSIONS_KEY } from '../decorators/require-permissions.decorator';
@@ -26,7 +32,7 @@ export class PermissionsGuard implements CanActivate {
     const user = request.user;
 
     if (!user || !user.businessId) {
-      return false; // User not authenticated or no business context
+      throw new UnauthorizedException('User not authenticated');
     }
 
     // Check each required permission (format: "action:resource")
@@ -45,7 +51,7 @@ export class PermissionsGuard implements CanActivate {
       );
 
       if (!hasPermission) {
-        return false; // User lacks at least one required permission
+        throw new ForbiddenException('Insufficient permissions');
       }
     }
 
