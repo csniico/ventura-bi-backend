@@ -6,9 +6,10 @@ import { UserModule } from './user/user.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logging.middleware';
 import { InvoiceModule } from './invoice/invoice.module';
 import { AppointmentModule } from './appointment/appointment.module';
-import { InventoryModule } from './inventory/inventory.module';
 import { CustomerModule } from './customer/customer.module';
 import { OrderModule } from './order/order.module';
+import { BusinessModule } from './business/business.module';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [
@@ -19,9 +20,10 @@ import { OrderModule } from './order/order.module';
     UserModule,
     InvoiceModule,
     AppointmentModule,
-    InventoryModule,
     CustomerModule,
     OrderModule,
+    BusinessModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [

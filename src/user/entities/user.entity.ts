@@ -1,7 +1,8 @@
 import { nanoid } from "nanoid";
-import { BeforeInsert, Column, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { BeforeInsert, Column, DeleteDateColumn, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Role } from "./role.entity";
 import { Permission } from "./permission.entity";
+import { Business } from "../../business/entities/business.entity";
 
 @Entity()
 export class User {
@@ -27,11 +28,26 @@ export class User {
     @Column({ unique: true })
     email: string;
 
+    @Column({ nullable: true })
+    googleId: string;
+
     @Column()
     password: string;
 
-    @Column()
+    @Column({ nullable: true })
     avatarUrl: string;
+
+    // Business relationship - business where user works
+    @ManyToOne(() => Business, business => business.users, { nullable: true, onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'business_id' })
+    business: Business;
+
+    @Column({ nullable: true })
+    businessId: string;
+
+    // Owned businesses - businesses created/owned by this user
+    @OneToMany(() => Business, business => business.owner)
+    ownedBusinesses: Business[];
 
     // Roles assigned to user (permanent)
     @ManyToMany(() => Role, { cascade: true, onDelete: 'CASCADE' })

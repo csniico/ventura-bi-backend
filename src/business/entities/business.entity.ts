@@ -1,12 +1,14 @@
 import { nanoid } from "nanoid";
 import { BeforeInsert, Column, DeleteDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { Business } from "../../business/entities/business.entity";
+import { User } from "../../user/entities/user.entity";
 import { Appointment } from "../../appointment/entities/appointment.entity";
+import { Customer } from "../../customer/entities/customer.entity";
 import { Invoice } from "../../invoice/entities/invoice.entity";
+import { Product } from "../../product/entities/product.entity";
 import { Order } from "../../order/entities/order.entity";
 
 @Entity()
-export class Customer {
+export class Business {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
@@ -21,19 +23,22 @@ export class Customer {
     }
 
     @Column()
-    firstName: string;
+    name: string;
 
-    @Column()
-    lastName: string;
+    @Column({ type: 'text', nullable: true })
+    description: string;
 
-    @Column()
+    @Column({ unique: true })
     email: string;
 
     @Column({ nullable: true })
     phone: string;
 
     @Column({ nullable: true })
-    avatar: string;
+    website: string;
+
+    @Column({ nullable: true })
+    logo: string;
 
     // Address fields
     @Column({ nullable: true })
@@ -51,34 +56,46 @@ export class Customer {
     @Column({ nullable: true })
     zipCode: string;
 
-    @Column({ type: 'date', nullable: true })
-    dateOfBirth: Date;
+    // Business details
+    @Column({ nullable: true })
+    taxId: string;
 
-    @Column({ type: 'text', nullable: true })
-    notes: string;
+    @Column({ nullable: true })
+    registrationNumber: string;
 
     @Column({ type: 'simple-json', nullable: true })
-    preferences: Record<string, any>;
+    businessHours: {
+        [key: string]: { open: string; close: string; };
+    };
 
     @Column({ type: 'simple-array', default: [] })
-    tags: string[];
+    categories: string[];
 
-    // Business relationship
-    @ManyToOne(() => Business, business => business.customers, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'business_id' })
-    business: Business;
+    // Owner relationship - user who created/owns the business
+    @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+    @JoinColumn({ name: 'owner_id' })
+    owner: User;
 
     @Column()
-    businessId: string;
+    ownerId: string;
 
     // Relationships
-    @OneToMany(() => Appointment, appointment => appointment.customer)
+    @OneToMany(() => User, user => user.business)
+    users: User[];
+
+    @OneToMany(() => Appointment, appointment => appointment.business)
     appointments: Appointment[];
 
-    @OneToMany(() => Invoice, invoice => invoice.customer)
+    @OneToMany(() => Customer, customer => customer.business)
+    customers: Customer[];
+
+    @OneToMany(() => Invoice, invoice => invoice.business)
     invoices: Invoice[];
 
-    @OneToMany(() => Order, order => order.customer)
+    @OneToMany(() => Product, product => product.business)
+    products: Product[];
+
+    @OneToMany(() => Order, order => order.business)
     orders: Order[];
 
     @Column({ default: true })
