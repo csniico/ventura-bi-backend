@@ -2,15 +2,13 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
-import { ShutdownService } from './shutdown.service';
-import { PrismaService } from './prisma/prisma.service';
-import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
-import { PrismaModule } from 'nestjs-prisma';
-import { PermissionModule } from './permission/permission.module';
-import { RoleService } from './role/role.service';
-import { RoleModule } from './role/role.module';
-import { AuthService } from './auth/auth.service';
-import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
+import { RequestLoggerMiddleware } from './common/middleware/request-logging.middleware';
+import { InvoiceModule } from './invoice/invoice.module';
+import { AppointmentModule } from './appointment/appointment.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { CustomerModule } from './customer/customer.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -18,20 +16,16 @@ import { AuthModule } from './auth/auth.module';
       isGlobal: true,
       expandVariables: true,
     }),
-    PrismaModule.forRoot({
-      isGlobal: true,
-    }),
-    PermissionModule,
-    RoleModule,
-    AuthModule,
+    UserModule,
+    InvoiceModule,
+    AppointmentModule,
+    InventoryModule,
+    CustomerModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    ShutdownService,
-    PrismaService,
-    RoleService,
-    AuthService,
   ],
 })
 export class AppModule {
