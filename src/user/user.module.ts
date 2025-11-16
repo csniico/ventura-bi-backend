@@ -11,5 +11,6 @@ import { userProviders } from './user.providers';
     ...userProviders,
     UserService
   ],
+  exports: [UserService, ...userProviders]
 })
 export class UserModule { }
