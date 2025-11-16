@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UnauthorizedException, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Request, Req, HttpCode, HttpStatus, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
+import type { Response } from 'express';
+import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -25,28 +25,11 @@ export class AuthController {
     }
   }
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
-  }
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(LocalAuthGuard)
+  @Post('/login')
+  login(@Req() req, @Res({ passthrough: true }) res: Response) {
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+    return this.authService.login(req.user.userData.id, req.user.userData, res)
   }
 }

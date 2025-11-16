@@ -5,6 +5,7 @@ import { USER_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateGoogleUserDto } from './dto/create-google-user.dto';
+import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class UserService {
@@ -23,9 +24,22 @@ export class UserService {
     return await this.userRepository.findOne({ where: { googleId } });
   }
 
-  async findUserByEmail(userEmail: string) {
-    const user = await this.userRepository.findOne({ where: { email: userEmail } })
+  async findUserByEmail(userEmail: string, password: boolean = false) {
+    if (!password) {
+      const user = await this.userRepository.findOne({ where: { email: userEmail } })
+      return user;
+    }
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email: userEmail })
+      .getOne();
     return user;
+  }
+
+  async comparePassword(password: string, hash: string) {
+    const isPasswordMatch = await bcrypt.compare(password, hash);
+    return isPasswordMatch;
   }
 
   async createGoogleUser(createGoogleUserDto: CreateGoogleUserDto) {
