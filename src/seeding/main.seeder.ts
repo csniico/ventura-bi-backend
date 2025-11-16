@@ -70,7 +70,7 @@ export class MainSeeder implements Seeder {
 
         console.log('Seeding users...');
         const userFactory = factoryManager.get(User);
-        const users = await userFactory.saveMany(15);
+        const users = await userFactory.saveMany(3);
 
         for (const user of users) {
             const randomRoles = roles
@@ -106,7 +106,7 @@ export class MainSeeder implements Seeder {
         const allCustomers: Customer[] = [];
 
         for (const business of businesses) {
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 5; i++) {
                 const customer = await customerFactory.make();
                 customer.business = business;
                 customer.businessId = business.id;
@@ -121,7 +121,7 @@ export class MainSeeder implements Seeder {
         const allProducts: Product[] = [];
 
         for (const business of businesses) {
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 5; i++) {
                 const product = await productFactory.make();
                 product.business = business;
                 product.businessId = business.id;
@@ -146,7 +146,7 @@ export class MainSeeder implements Seeder {
             const employees = businessEmployees[business.id];
             const owner = business.owner;
 
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < 5; i++) {
                 const appointment = await appointmentFactory.make();
                 appointment.business = business;
                 appointment.businessId = business.id;
@@ -178,7 +178,7 @@ export class MainSeeder implements Seeder {
             const customers = businessCustomers[business.id];
             const products = businessProducts[business.id];
 
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 5; i++) {
                 const order = await orderFactory.make();
                 order.business = business;
                 order.businessId = business.id;
@@ -206,7 +206,7 @@ export class MainSeeder implements Seeder {
         for (const business of businesses) {
             const customers = businessCustomers[business.id];
 
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < 5; i++) {
                 const invoice = await invoiceFactory.make();
                 invoice.business = business;
                 invoice.businessId = business.id;
