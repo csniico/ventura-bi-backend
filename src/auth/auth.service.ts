@@ -60,6 +60,7 @@ export class AuthService {
       path: '/'
     })
 
+    delete user.password;
     return { user }
   }
 
