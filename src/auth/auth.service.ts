@@ -24,7 +24,7 @@ export class AuthService {
     const user = await this.userService.findGoogleUserByEmail(email);
     if (user) return user;
 
-    return await this.userService.createGoogleUser(googleUser);
+    return await this.userService.createGoogleUser(googleUser, true);
   }
 
   async validateUserWithEmailAndPassword(loginDto: LoginDto) {

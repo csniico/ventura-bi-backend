@@ -5,6 +5,26 @@ import { ValidationPipe } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { networkInterfaces } from 'os';
+
+function getLocalIpAddress(): string {
+  const nets = networkInterfaces();
+
+  for (const name of Object.keys(nets)) {
+    const netInfo = nets[name];
+    if (!netInfo) continue;
+
+    for (const net of netInfo) {
+      // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+      const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4;
+      if (net.family === familyV4Value && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+
+  return 'localhost';
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -45,7 +65,12 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('SERVER_PORT', 3000);
 
-  await app.listen(port);
-  console.log(`App is running on port: ${port}`);
+  await app.listen(port, '0.0.0.0'); // Listen on all network interfaces
+
+  const localIp = getLocalIpAddress();
+  console.log(`App started successfully!`);
+  console.log(`Local:            http://localhost:${port}`);
+  console.log(`Network:          http://${localIp}:${port}`);
+  console.log(`API Docs:         http://${localIp}:${port}/api/docs`);
 }
 bootstrap().catch(console.error);

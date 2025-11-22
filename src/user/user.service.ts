@@ -42,14 +42,15 @@ export class UserService {
     return isPasswordMatch;
   }
 
-  async createGoogleUser(createGoogleUserDto: CreateGoogleUserDto) {
+  async createGoogleUser(createGoogleUserDto: CreateGoogleUserDto, isSystem = false) {
     const { email, firstName, lastName, avatarUrl, googleId } = createGoogleUserDto;
     const user = this.userRepository.create({
       email,
       avatarUrl,
       firstName,
       lastName,
-      googleId
+      googleId,
+      isSystem
     })
     return await this.userRepository.save(user);
   }

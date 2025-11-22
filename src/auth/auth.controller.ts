@@ -1,8 +1,9 @@
-import { Controller, Get, Post, UseGuards, Request, Req, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Request, Req, HttpCode, HttpStatus, Res, Query, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
 import type { Response } from 'express';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
+import { CreateGoogleUserDto } from 'src/user/dto/create-google-user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -31,5 +32,11 @@ export class AuthController {
   login(@Req() req, @Res({ passthrough: true }) res: Response) {
 
     return this.authService.login(req.user.userData.id, req.user.userData, res)
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/mobile/signin')
+  googleSignInMobile(@Body() createGoogleUser: CreateGoogleUserDto) {
+    return this.authService.validateGoogleUser(createGoogleUser)
   }
 }
