@@ -70,7 +70,7 @@ export class MainSeeder implements Seeder {
 
         console.log('Seeding users...');
         const userFactory = factoryManager.get(User);
-        const users = await userFactory.saveMany(3);
+        const users = await userFactory.saveMany(15);
 
         for (const user of users) {
             const randomRoles = roles
@@ -96,10 +96,10 @@ export class MainSeeder implements Seeder {
 
         console.log('Assigning employees to businesses...');
         for (let i = 3; i < users.length; i++) {
-            users[i].business = businesses[i % businesses.length];
-            users[i].businessId = businesses[i % businesses.length].id;
+            users[i].employerBusiness = businesses[i % businesses.length];
             await dataSource.getRepository(User).save(users[i]);
         }
+        console.log('Assigned employees to businesses');
 
         console.log('Seeding customers...');
         const customerFactory = factoryManager.get(Customer);
@@ -138,7 +138,10 @@ export class MainSeeder implements Seeder {
 
         for (const business of businesses) {
             businessCustomers[business.id] = allCustomers.filter(c => c.businessId === business.id);
-            businessEmployees[business.id] = users.filter(u => u.businessId === business.id);
+            // Find employees who work for this business (including owner)
+            businessEmployees[business.id] = users.filter(u =>
+                u.employerBusiness?.id === business.id || u.ownedBusinesses?.some(b => b.id === business.id)
+            );
         }
 
         for (const business of businesses) {

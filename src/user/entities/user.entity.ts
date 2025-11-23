@@ -37,13 +37,10 @@ export class User {
     @Column({ nullable: true })
     avatarUrl: string;
 
-    // Business relationship - business where user works
-    @ManyToOne(() => Business, business => business.users, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'business_id' })
-    business: Business;
-
-    @Column({ nullable: true })
-    businessId: string;
+    // Business relationship - business where user works (employee)
+    @ManyToOne(() => Business, business => business.employees, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'employer_business_id' })
+    employerBusiness: Business;
 
     // Owned businesses - businesses created/owned by this user
     @OneToMany(() => Business, business => business.owner)

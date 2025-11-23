@@ -79,10 +79,11 @@ export class Business {
     @Column()
     ownerId: string;
 
-    // Relationships
-    @OneToMany(() => User, user => user.business)
-    users: User[];
+    // Employees - users who work for this business
+    @OneToMany(() => User, user => user.employerBusiness)
+    employees: User[];
 
+    // Relationships
     @OneToMany(() => Appointment, appointment => appointment.business)
     appointments: Appointment[];
 
