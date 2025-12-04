@@ -8,7 +8,7 @@ import {
   Matches,
 } from 'class-validator';
 
-export class CreateUserDto {
+export class SignUpDto {
   @IsString()
   @IsNotEmpty()
   @Length(1, 25)

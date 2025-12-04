@@ -11,6 +11,7 @@ import { OrderModule } from './order/order.module';
 import { BusinessModule } from './business/business.module';
 import { ProductModule } from './product/product.module';
 import { AuthModule } from './auth/auth.module';
+import { MailerModule } from './mailer/mailer.module';
 
 @Module({
   imports: [
@@ -26,11 +27,10 @@ import { AuthModule } from './auth/auth.module';
     BusinessModule,
     ProductModule,
     AuthModule,
+    MailerModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-  ],
+  providers: [AppService],
 })
 export class AppModule {
   configure(consumer: import('@nestjs/common').MiddlewareConsumer): void {

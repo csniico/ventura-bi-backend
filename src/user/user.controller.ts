@@ -1,34 +1,85 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Body,
+  Patch,
+  BadRequestException,
+  Param,
+  Post,
+  Query,
+  Get,
+} from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateAvatarDto } from './dto/update-avatar.dto';
+import { UpdateNameDto } from './dto/update-name.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GetUsersDto } from './dto/get-users.dto';
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) { }
-
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
-  }
+  constructor(private readonly userService: UserService) {}
 
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  async getAllUsers(@Query() getusersDto: GetUsersDto) {
+    return await this.userService.findAllUsers(getusersDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+  @Patch('/:userId/avatar')
+  async updateAvatarUrl(
+    @Param('userId') userId: string,
+    @Body() updateAvatarDto: UpdateAvatarDto,
+  ) {
+    const { avatarUrl } = updateAvatarDto;
+    if (!avatarUrl || !userId) {
+      throw new BadRequestException('avatarUrl and userId are required');
+    }
+    return await this.userService.updateAvatarUrl(avatarUrl, userId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
+  @Patch('/:userId/name')
+  async updateFirstnameAndLastname(
+    @Param('userId') userId: string,
+    @Body() updateNameDto: UpdateNameDto,
+  ) {
+    const { firstName, lastName } = updateNameDto;
+    if (!firstName || !userId) {
+      throw new BadRequestException('firstName and userId are required');
+    }
+    const updatedUser = await this.userService.updateFirstnameAndLastname(
+      firstName,
+      userId,
+      lastName,
+    );
+    return updatedUser;
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+  @Post('/:userId/change-password')
+  async changePassword(
+    @Param('userId') userId: string,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    const { oldPassword, newPassword } = changePasswordDto;
+    if (!oldPassword || !newPassword || !userId) {
+      throw new BadRequestException(
+        'oldPassword, newPassword and userId are required',
+      );
+    }
+    return await this.userService.updatePassword(
+      oldPassword,
+      newPassword,
+      userId,
+    );
+  }
+
+  @Post('/:userId/reset-password')
+  async resetPassword(
+    @Param('userId') userId: string,
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ) {
+    const { newPassword } = resetPasswordDto;
+    if (!newPassword || !userId) {
+      throw new BadRequestException('newPassword and userId are required');
+    }
+    return await this.userService.resetPassword(newPassword, userId);
   }
 }
