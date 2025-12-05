@@ -10,6 +10,8 @@ import { MAILER_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import Mail from 'nodemailer/lib/mailer';
 import { MailOptions } from 'nodemailer/lib/sendmail-transport';
+import { nanoid } from 'nanoid';
+import { EmailVerificationTemplate, VERIFICATION_EMAIL_SUBJECT } from './templates/email-verification-template';
 
 @Injectable()
 export class MailerService {
@@ -28,7 +30,7 @@ export class MailerService {
     });
   }
 
-  async sendEmail(sendMailDto: SendMailDto) {
+  private async sendEmail(sendMailDto: SendMailDto) {
     const { to, htmlBody, subject, cc } = sendMailDto;
     if (!to) {
       throw new InternalServerErrorException('Recipient email is required.');
@@ -45,14 +47,65 @@ export class MailerService {
         to: to,
         subject: subject,
         html: htmlBody,
-        cc: cc,
         replyTo: this.configService.get<string>('MAIL_USER'),
       };
+      if (cc && cc !== "") {
+        mailOptions.cc = cc;
+      }
       await this.transporter.sendMail(mailOptions);
       return true;
     } catch (error) {
       console.log(error);
       throw InternalServerErrorException;
+    }
+  }
+
+  private generateEmailVerificationTemplate(firstName: string, verificationCode: string, expirationMinutes: number) {
+    const emailTemplte = EmailVerificationTemplate(firstName, verificationCode, expirationMinutes);
+    return emailTemplte;
+  }
+
+  private generateWelcomeEmailTemplate() {
+
+  }
+
+  private generateEmailVerificationCode() {
+    try {
+      const verificationCode = nanoid(6);
+      return verificationCode;
+    } catch (error) {
+      console.error({
+        message: 'Error generating email verification code',
+        error,
+      });
+      const fallbackCode = Math.floor(100000 + Math.random() * 900000).toString();
+      return fallbackCode;
+    }
+  }
+
+  async sendVerificationEmail(firstName: string, recipientEmail: string,) {
+    if (!firstName) {
+      throw new Error('firstName is required');
+    }
+    if (!recipientEmail) {
+      throw new Error('recipientEmail is required');
+    }
+    try {
+      const code = this.generateEmailVerificationCode();
+      const subject = VERIFICATION_EMAIL_SUBJECT;
+      const template = this.generateEmailVerificationTemplate(firstName, code, 10);
+
+      await this.sendEmail({
+        htmlBody: template,
+        subject: subject,
+        to: recipientEmail,
+      })
+    } catch (error) {
+      console.error({
+        message: 'Error sending verification email',
+        error,
+      });
+      throw new InternalServerErrorException('Failed to send verification email');
     }
   }
 }

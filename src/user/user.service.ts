@@ -26,7 +26,7 @@ export class UserService {
     private businessRepository: Repository<Business>,
 
     private mailerService: MailerService,
-  ) {}
+  ) { }
 
   async findUserById(userId: string) {
     if (!userId) {
@@ -122,6 +122,7 @@ export class UserService {
       lastName,
       googleId,
       isSystem,
+      isEmailVerified: true
     });
     const user = await this.userRepository.save(newUser);
     return user;
@@ -142,12 +143,7 @@ export class UserService {
         avatarUrl: avatarUrl || undefined,
       });
       const user = await this.userRepository.save(newUser);
-      await this.mailerService.sendEmail({
-        to: email,
-        subject: 'Welcome to Ventura',
-        htmlBody: `<h1>Welcome to Ventura, ${firstName}!</h1><p>We're excited to have you on board.</p>`,
-        cc: 'cncs2101@gmail.com',
-      });
+      await this.mailerService.sendVerificationEmail(user.firstName, user.email);
       return user;
     } catch (error) {
       if (error instanceof QueryFailedError) {
@@ -157,6 +153,29 @@ export class UserService {
           )
         )
           throw new ConflictException('User already exists');
+      }
+      throw new InternalServerErrorException('Something went wrong');
+    }
+  }
+
+  async setEmailVerificationState(userId: string, email: string, state = true) {
+    if (!userId) {
+      throw new BadRequestException('userId is expected.');
+    }
+    if (!email) {
+      throw new BadRequestException('email is expected.');
+    }
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId, email: email } });
+      if (!user) {
+        throw new NotFoundException('User not found.');
+      }
+      user.isEmailVerified = state ? true : false;
+      await this.userRepository.save(user);
+      return user;
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        throw new InternalServerErrorException('Database error occurred.');
       }
       throw new InternalServerErrorException('Something went wrong');
     }

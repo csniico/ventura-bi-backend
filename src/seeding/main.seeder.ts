@@ -68,157 +68,83 @@ export class MainSeeder implements Seeder {
         }
         console.log(`Created ${roles.length} roles`);
 
-        console.log('Seeding users...');
+        console.log('Seeding user...');
         const userFactory = factoryManager.get(User);
-        const users = await userFactory.saveMany(15);
+        const user = await userFactory.make();
 
-        for (const user of users) {
-            const randomRoles = roles
-                .sort(() => 0.5 - Math.random())
-                .slice(0, Math.floor(Math.random() * 2) + 1);
-            user.roles = randomRoles;
-            await dataSource.getRepository(User).save(user);
-        }
-        console.log(`Created ${users.length} users`);
+        // Assign the admin role to the user
+        user.roles = [roles.find(r => r.name === 'admin')!];
+        const savedUser = await dataSource.getRepository(User).save(user);
+        console.log(`Created 1 user`);
 
-        console.log('Seeding businesses...');
+        console.log('Seeding business...');
         const businessFactory = factoryManager.get(Business);
-        const businesses: Business[] = [];
+        const business = await businessFactory.make();
+        business.owner = savedUser;
+        business.ownerId = savedUser.id;
+        const savedBusiness = await dataSource.getRepository(Business).save(business);
+        console.log(`Created 1 business`);
 
-        for (let i = 0; i < 3; i++) {
-            const business = await businessFactory.make();
-            business.owner = users[i];
-            business.ownerId = users[i].id;
-            const savedBusiness = await dataSource.getRepository(Business).save(business);
-            businesses.push(savedBusiness);
-        }
-        console.log(`Created ${businesses.length} businesses`);
-
-        console.log('Assigning employees to businesses...');
-        for (let i = 3; i < users.length; i++) {
-            users[i].employerBusiness = businesses[i % businesses.length];
-            await dataSource.getRepository(User).save(users[i]);
-        }
-        console.log('Assigned employees to businesses');
-
-        console.log('Seeding customers...');
+        console.log('Seeding customer...');
         const customerFactory = factoryManager.get(Customer);
-        const allCustomers: Customer[] = [];
+        const customer = await customerFactory.make();
+        customer.business = savedBusiness;
+        customer.businessId = savedBusiness.id;
+        const savedCustomer = await dataSource.getRepository(Customer).save(customer);
+        console.log(`Created 1 customer`);
 
-        for (const business of businesses) {
-            for (let i = 0; i < 5; i++) {
-                const customer = await customerFactory.make();
-                customer.business = business;
-                customer.businessId = business.id;
-                const savedCustomer = await dataSource.getRepository(Customer).save(customer);
-                allCustomers.push(savedCustomer);
-            }
-        }
-        console.log(`Created ${allCustomers.length} customers`);
-
-        console.log('Seeding products...');
+        console.log('Seeding product...');
         const productFactory = factoryManager.get(Product);
-        const allProducts: Product[] = [];
+        const product = await productFactory.make();
+        product.business = savedBusiness;
+        product.businessId = savedBusiness.id;
+        const savedProduct = await dataSource.getRepository(Product).save(product);
+        console.log(`Created 1 product`);
 
-        for (const business of businesses) {
-            for (let i = 0; i < 5; i++) {
-                const product = await productFactory.make();
-                product.business = business;
-                product.businessId = business.id;
-                const savedProduct = await dataSource.getRepository(Product).save(product);
-                allProducts.push(savedProduct);
-            }
-        }
-        console.log(`Created ${allProducts.length} products`);
-
-        console.log('Seeding appointments...');
+        console.log('Seeding appointment...');
         const appointmentFactory = factoryManager.get(Appointment);
-        const businessCustomers: { [key: string]: Customer[] } = {};
-        const businessEmployees: { [key: string]: User[] } = {};
+        const appointment = await appointmentFactory.make();
+        appointment.business = savedBusiness;
+        appointment.businessId = savedBusiness.id;
+        appointment.customer = savedCustomer;
+        appointment.customerId = savedCustomer.id;
+        appointment.organizer = savedUser;
+        appointment.organizerId = savedUser.id;
+        await dataSource.getRepository(Appointment).save(appointment);
+        console.log('Created 1 appointment');
 
-        for (const business of businesses) {
-            businessCustomers[business.id] = allCustomers.filter(c => c.businessId === business.id);
-            // Find employees who work for this business (including owner)
-            businessEmployees[business.id] = users.filter(u =>
-                u.employerBusiness?.id === business.id || u.ownedBusinesses?.some(b => b.id === business.id)
-            );
-        }
-
-        for (const business of businesses) {
-            const customers = businessCustomers[business.id];
-            const employees = businessEmployees[business.id];
-            const owner = business.owner;
-
-            for (let i = 0; i < 5; i++) {
-                const appointment = await appointmentFactory.make();
-                appointment.business = business;
-                appointment.businessId = business.id;
-                appointment.customer = customers[Math.floor(Math.random() * customers.length)];
-                appointment.customerId = appointment.customer.id;
-                appointment.organizer = owner;
-                appointment.organizerId = owner.id;
-
-                if (employees.length > 0 && Math.random() > 0.3) {
-                    appointment.assignedTo = employees[Math.floor(Math.random() * employees.length)];
-                    appointment.assignedToId = appointment.assignedTo.id;
-                }
-
-                await dataSource.getRepository(Appointment).save(appointment);
-            }
-        }
-        console.log('Created appointments');
-
-        console.log('Seeding orders...');
+        console.log('Seeding order...');
         const orderFactory = factoryManager.get(Order);
         const orderItemFactory = factoryManager.get(OrderItem);
-        const businessProducts: { [key: string]: Product[] } = {};
 
-        for (const business of businesses) {
-            businessProducts[business.id] = allProducts.filter(p => p.businessId === business.id);
-        }
+        const order = await orderFactory.make();
+        order.business = savedBusiness;
+        order.businessId = savedBusiness.id;
+        order.customer = savedCustomer;
+        order.customerId = savedCustomer.id;
+        const savedOrder = await dataSource.getRepository(Order).save(order);
 
-        for (const business of businesses) {
-            const customers = businessCustomers[business.id];
-            const products = businessProducts[business.id];
+        // Create one order item
+        const orderItem = await orderItemFactory.make();
+        orderItem.order = savedOrder;
+        orderItem.orderId = savedOrder.id;
+        orderItem.product = savedProduct;
+        orderItem.productId = savedProduct.id;
+        await dataSource.getRepository(OrderItem).save(orderItem);
 
-            for (let i = 0; i < 5; i++) {
-                const order = await orderFactory.make();
-                order.business = business;
-                order.businessId = business.id;
-                order.customer = customers[Math.floor(Math.random() * customers.length)];
-                order.customerId = order.customer.id;
+        console.log('Created 1 order with 1 item');
 
-                const savedOrder = await dataSource.getRepository(Order).save(order);
-
-                const itemCount = Math.floor(Math.random() * 5) + 1;
-                for (let i = 0; i < itemCount; i++) {
-                    const orderItem = await orderItemFactory.make();
-                    orderItem.order = savedOrder;
-                    orderItem.orderId = savedOrder.id;
-                    orderItem.product = products[Math.floor(Math.random() * products.length)];
-                    orderItem.productId = orderItem.product.id;
-                    await dataSource.getRepository(OrderItem).save(orderItem);
-                }
-            }
-        }
-        console.log('Created orders with items');
-
-        console.log('Seeding invoices...');
+        console.log('Seeding invoice...');
         const invoiceFactory = factoryManager.get(Invoice);
 
-        for (const business of businesses) {
-            const customers = businessCustomers[business.id];
+        const invoice = await invoiceFactory.make();
+        invoice.business = savedBusiness;
+        invoice.businessId = savedBusiness.id;
+        invoice.customer = savedCustomer;
+        invoice.customerId = savedCustomer.id;
+        await dataSource.getRepository(Invoice).save(invoice);
 
-            for (let i = 0; i < 5; i++) {
-                const invoice = await invoiceFactory.make();
-                invoice.business = business;
-                invoice.businessId = business.id;
-                invoice.customer = customers[Math.floor(Math.random() * customers.length)];
-                invoice.customerId = invoice.customer.id;
-                await dataSource.getRepository(Invoice).save(invoice);
-            }
-        }
-        console.log('Created invoices');
+        console.log('Created 1 invoice');
 
         console.log('All seeding completed successfully!');
     }
