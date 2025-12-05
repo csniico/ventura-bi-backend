@@ -10,8 +10,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Business } from '../../business/entities/business.entity';
-import { OrderItem } from '../../order/entities/order-item.entity';
+import { Business } from 'src/business/entities/business.entity';
+import { OrderItem } from 'src/order/entities/order-item.entity';
 
 export enum ProductType {
   PHYSICAL = 'physical',

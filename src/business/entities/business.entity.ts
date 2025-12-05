@@ -10,12 +10,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { User } from '../../user/entities/user.entity';
-import { Appointment } from '../../appointment/entities/appointment.entity';
-import { Customer } from '../../customer/entities/customer.entity';
-import { Invoice } from '../../invoice/entities/invoice.entity';
-import { Product } from '../../product/entities/product.entity';
-import { Order } from '../../order/entities/order.entity';
+import { User } from 'src/user/entities/user.entity';
+import { Appointment } from 'src/appointment/entities/appointment.entity';
+import { Customer } from 'src/customer/entities/customer.entity';
+import { Invoice } from 'src/invoice/entities/invoice.entity';
+import { Product } from 'src/product/entities/product.entity';
+import { Order } from 'src/order/entities/order.entity';
 
 @Entity()
 export class Business {

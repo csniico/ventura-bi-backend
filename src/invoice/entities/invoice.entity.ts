@@ -9,9 +9,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Business } from '../../business/entities/business.entity';
-import { Customer } from '../../customer/entities/customer.entity';
-import { Order } from '../../order/entities/order.entity';
+import { Business } from 'src/business/entities/business.entity';
+import { Customer } from 'src/customer/entities/customer.entity';
+import { Order } from 'src/order/entities/order.entity';
 
 export enum InvoiceStatus {
   DRAFT = 'draft',

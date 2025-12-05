@@ -14,6 +14,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
       const status = res.statusCode;
       const bytes = res.getHeader('content-length') || 0;
       console.log(
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         `[${new Date().toISOString()}] ${method} ${originalUrl} - ${status} - ${bytes} bytes - ${duration}ms - source: ${source}`,
       );
     });

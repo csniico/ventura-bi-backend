@@ -3,8 +3,7 @@ import { setSeederFactory } from 'typeorm-extension';
 
 export const BusinessFactory = setSeederFactory(Business, (faker) => {
   const business = new Business();
-  const companyName = faker.company.name();
-  business.name = companyName;
+  business.name = faker.company.name();
   business.description = faker.company.catchPhrase();
   const emailDomain = faker.internet.domainName();
   business.email = `info@${emailDomain}`;

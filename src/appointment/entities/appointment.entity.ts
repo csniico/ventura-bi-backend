@@ -9,9 +9,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Business } from '../../business/entities/business.entity';
-import { Customer } from '../../customer/entities/customer.entity';
-import { User } from '../../user/entities/user.entity';
+import { Business } from 'src/business/entities/business.entity';
+import { Customer } from 'src/customer/entities/customer.entity';
+import { User } from 'src/user/entities/user.entity';
 
 export enum AppointmentStatus {
   PENDING = 'pending',

@@ -11,6 +11,7 @@ export const ProductFactory = setSeederFactory(Product, (faker) => {
   product.costPrice = parseFloat(
     faker.commerce.price({ min: 3, max: 400, dec: 2 }),
   );
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   product.type = faker.helpers.arrayElement([
     'physical',
     'digital',
