@@ -26,7 +26,7 @@ export class UserService {
     private businessRepository: Repository<Business>,
 
     private mailerService: MailerService,
-  ) { }
+  ) {}
 
   async findUserById(userId: string) {
     if (!userId) {
@@ -122,7 +122,7 @@ export class UserService {
       lastName,
       googleId,
       isSystem,
-      isEmailVerified: true
+      isEmailVerified: true,
     });
     const user = await this.userRepository.save(newUser);
     return user;
@@ -143,7 +143,10 @@ export class UserService {
         avatarUrl: avatarUrl || undefined,
       });
       const user = await this.userRepository.save(newUser);
-      await this.mailerService.sendVerificationEmail(user.firstName, user.email);
+      await this.mailerService.sendVerificationEmail(
+        user.firstName,
+        user.email,
+      );
       return user;
     } catch (error) {
       if (error instanceof QueryFailedError) {
@@ -166,7 +169,9 @@ export class UserService {
       throw new BadRequestException('email is expected.');
     }
     try {
-      const user = await this.userRepository.findOne({ where: { id: userId, email: email } });
+      const user = await this.userRepository.findOne({
+        where: { id: userId, email: email },
+      });
       if (!user) {
         throw new NotFoundException('User not found.');
       }

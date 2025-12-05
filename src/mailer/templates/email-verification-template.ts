@@ -1,12 +1,11 @@
-
-export const VERIFICATION_EMAIL_SUBJECT = "Verify your email for Ventura";
+export const VERIFICATION_EMAIL_SUBJECT = 'Verify your email for Ventura';
 
 export function EmailVerificationTemplate(
-    firstName: string,
-    verificationCode: string,
-    expirationMinutes: number = 10
+  firstName: string,
+  verificationCode: string,
+  expirationMinutes: number = 10,
 ) {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>

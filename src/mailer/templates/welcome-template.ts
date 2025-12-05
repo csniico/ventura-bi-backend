@@ -1,3 +1,1 @@
-export async function WelcomeEmailTemplate() {
-
-}
+export async function WelcomeEmailTemplate() {}

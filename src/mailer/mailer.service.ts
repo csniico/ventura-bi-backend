@@ -11,7 +11,10 @@ import { Repository } from 'typeorm';
 import Mail from 'nodemailer/lib/mailer';
 import { MailOptions } from 'nodemailer/lib/sendmail-transport';
 import { nanoid } from 'nanoid';
-import { EmailVerificationTemplate, VERIFICATION_EMAIL_SUBJECT } from './templates/email-verification-template';
+import {
+  EmailVerificationTemplate,
+  VERIFICATION_EMAIL_SUBJECT,
+} from './templates/email-verification-template';
 
 @Injectable()
 export class MailerService {
@@ -49,7 +52,7 @@ export class MailerService {
         html: htmlBody,
         replyTo: this.configService.get<string>('MAIL_USER'),
       };
-      if (cc && cc !== "") {
+      if (cc && cc !== '') {
         mailOptions.cc = cc;
       }
       await this.transporter.sendMail(mailOptions);
@@ -60,14 +63,20 @@ export class MailerService {
     }
   }
 
-  private generateEmailVerificationTemplate(firstName: string, verificationCode: string, expirationMinutes: number) {
-    const emailTemplte = EmailVerificationTemplate(firstName, verificationCode, expirationMinutes);
+  private generateEmailVerificationTemplate(
+    firstName: string,
+    verificationCode: string,
+    expirationMinutes: number,
+  ) {
+    const emailTemplte = EmailVerificationTemplate(
+      firstName,
+      verificationCode,
+      expirationMinutes,
+    );
     return emailTemplte;
   }
 
-  private generateWelcomeEmailTemplate() {
-
-  }
+  private generateWelcomeEmailTemplate() {}
 
   private generateEmailVerificationCode() {
     try {
@@ -78,12 +87,14 @@ export class MailerService {
         message: 'Error generating email verification code',
         error,
       });
-      const fallbackCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const fallbackCode = Math.floor(
+        100000 + Math.random() * 900000,
+      ).toString();
       return fallbackCode;
     }
   }
 
-  async sendVerificationEmail(firstName: string, recipientEmail: string,) {
+  async sendVerificationEmail(firstName: string, recipientEmail: string) {
     if (!firstName) {
       throw new Error('firstName is required');
     }
@@ -93,19 +104,25 @@ export class MailerService {
     try {
       const code = this.generateEmailVerificationCode();
       const subject = VERIFICATION_EMAIL_SUBJECT;
-      const template = this.generateEmailVerificationTemplate(firstName, code, 10);
+      const template = this.generateEmailVerificationTemplate(
+        firstName,
+        code,
+        10,
+      );
 
       await this.sendEmail({
         htmlBody: template,
         subject: subject,
         to: recipientEmail,
-      })
+      });
     } catch (error) {
       console.error({
         message: 'Error sending verification email',
         error,
       });
-      throw new InternalServerErrorException('Failed to send verification email');
+      throw new InternalServerErrorException(
+        'Failed to send verification email',
+      );
     }
   }
 }
