@@ -92,8 +92,7 @@ eslint.config.mjs
 # Package manager files - keep pnpm files for reproducible builds
 package-lock.json
 yarn.lock
- pnpm-lock.yaml
- pnpm-workspace.yaml
+# pnpm-lock.yaml
 
 # Temporary files
 tmp/
