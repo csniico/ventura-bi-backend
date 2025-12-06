@@ -28,7 +28,7 @@ WORKDIR /app
 COPY package.json ./
 
 # Install ONLY production dependencies, minimizing final image size
-RUN npm install --only=production
+RUN npm install
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
