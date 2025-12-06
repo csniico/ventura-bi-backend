@@ -1,0 +1,54 @@
+# CODEOWNERS file for backend-service
+# This file defines who is responsible for code in this repository
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+# These owners will be requested for review when someone opens a pull request
+*       @chris-zano
+
+# Documentation
+*.md    @chris-zano
+/docs/  @chris-zano
+
+# Configuration files
+*.json          @chris-zano
+*.yaml          @chris-zano
+*.yml           @chris-zano
+.env*           @chris-zano
+Dockerfile      @chris-zano
+docker-compose* @chris-zano
+
+# CI/CD workflows
+/.github/       @chris-zano
+
+# Core application
+/src/           @chris-zano
+
+# Authentication & Authorization
+/src/auth/      @chris-zano
+
+# Business logic modules
+/src/business/  @chris-zano
+/src/customer/  @chris-zano
+/src/order/     @chris-zano
+/src/invoice/   @chris-zano
+/src/product/   @chris-zano
+/src/appointment/ @chris-zano
+
+# User management
+/src/user/      @chris-zano
+
+# Infrastructure
+/src/database/  @chris-zano
+/src/mailer/    @chris-zano
+
+# Testing
+/test/          @chris-zano
+*.spec.ts       @chris-zano
+*.e2e-spec.ts   @chris-zano
+
+# Build configuration
+tsconfig*.json  @chris-zano
+nest-cli.json   @chris-zano
+eslint.config.* @chris-zano
+

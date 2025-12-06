@@ -124,16 +124,15 @@ export class UserService {
       isSystem,
       isEmailVerified: true,
     });
-    const user = await this.userRepository.save(newUser);
-    return user;
+    return await this.userRepository.save(newUser);
   }
 
   async createUserWithEmailAndPassword(createUser: CreateUserDto) {
+    const { email, password, firstName, lastName, avatarUrl } = createUser;
+    if (!password) {
+      throw new BadRequestException('Password is required');
+    }
     try {
-      const { email, password, firstName, lastName, avatarUrl } = createUser;
-      if (!password) {
-        throw new BadRequestException('Password is required');
-      }
       const hashedPassword = await this.hashPassword(password);
       const newUser = this.userRepository.create({
         email,
