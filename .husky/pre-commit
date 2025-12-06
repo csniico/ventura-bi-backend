@@ -1,0 +1,26 @@
+echo "Running pre-commit checks..."
+
+# 1. Run lint-staged for Linting and Formatting
+npx lint-staged || { echo "Linting/Formatting failed. Commit aborted."; exit 1; }
+
+# 2. Check Branch Naming Convention
+BRANCH_NAME=$(git symbolic-ref --short HEAD)
+# Allows merging branches (main, dev) to skip the naming convention check
+# shellcheck disable=SC3010
+if [[ ! $BRANCH_NAME =~ ^(main|dev|feature\/|fix\/|hotfix\/) ]]; then
+  echo ""
+  echo "ERROR: Branch name '$BRANCH_NAME' must start with 'feature/', 'fix/', or 'hotfix/'. (Skipping main/dev)"
+  exit 1
+fi
+
+COMMIT_MSG=$(cat .git/COMMIT_EDITMSG)
+CONVENTIONAL_COMMIT_REGEX='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?:'
+
+# We check if the FIRST line of the commit message matches the regex
+if ! echo "$COMMIT_MSG" | head -n 1 | grep -qE "$CONVENTIONAL_COMMIT_REGEX"; then
+  echo ""
+  echo "ERROR: Commit message does not follow Conventional Commits format (e.g., feat(scope): message)."
+  exit 1
+fi
+
+echo "Pre-commit checks passed."

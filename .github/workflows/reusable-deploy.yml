@@ -1,0 +1,35 @@
+name: Reusable Deploy
+
+on:
+  workflow_call:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Determine tag based on branch (e.g., 'latest' for main, 'dev' for dev)
+      - name: Set Image Tag
+        id: image_tag
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            TAG="latest"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          file: Docker/Dockerfile
+          context: .
+          push: true
+          tags: ${{secrets.DOCKER_REPOSITORY_NAME}}:${{ steps.image_tag.outputs.tag }}

@@ -46,7 +46,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
-  @Post('/login')
+  @Post('/signin')
   login(
     @Req() req: Request & { user?: { userData: User } },
     @Body() body: { email: string; password: string },
@@ -65,9 +65,5 @@ export class AuthController {
   @Post('/signup')
   async signup(@Body() signUpUser: SignUpDto) {
     return await this.authService.signupWithEmailAndPassword(signUpUser);
-    // return {
-    //   message: 'User registration successful',
-    //   user: user,
-    // };
   }
 }

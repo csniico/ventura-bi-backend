@@ -16,7 +16,7 @@ function getLocalIpAddress(): string {
 
     for (const net of netInfo) {
       // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-      const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4;
+      const familyV4Value = 'IPv4';
       if (net.family === familyV4Value && !net.internal) {
         return net.address;
       }
@@ -28,6 +28,7 @@ function getLocalIpAddress(): string {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
   app.use(cookieParser());
   app.enableCors({
     origin: ['*'],

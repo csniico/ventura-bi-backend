@@ -68,29 +68,25 @@ export class MailerService {
     verificationCode: string,
     expirationMinutes: number,
   ) {
-    const emailTemplte = EmailVerificationTemplate(
+    return EmailVerificationTemplate(
       firstName,
       verificationCode,
       expirationMinutes,
     );
-    return emailTemplte;
   }
 
   private generateWelcomeEmailTemplate() {}
 
   private generateEmailVerificationCode() {
     try {
-      const verificationCode = nanoid(6);
-      return verificationCode;
-    } catch (error) {
+      return nanoid(6);
+    } catch (error: unknown) {
       console.error({
         message: 'Error generating email verification code',
         error,
       });
-      const fallbackCode = Math.floor(
-        100000 + Math.random() * 900000,
-      ).toString();
-      return fallbackCode;
+
+      return Math.floor(100000 + Math.random() * 900000).toString();
     }
   }
 
@@ -115,7 +111,7 @@ export class MailerService {
         subject: subject,
         to: recipientEmail,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error({
         message: 'Error sending verification email',
         error,

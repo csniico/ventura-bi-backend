@@ -1,0 +1,23 @@
+name: CI/CD Pipeline
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - 'feature/*'
+  pull_request:
+    branches:
+      - main
+      - dev
+      - 'feature/*'
+
+jobs:
+  checks:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name != 'main' && github.ref_name != 'dev')
+    uses: ./.github/workflows/reusable-checks.yml
+    secrets: inherit
+
+  deploy:
+    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev')
+    uses: ./.github/workflows/reusable-deploy.yml
+    secrets: inherit

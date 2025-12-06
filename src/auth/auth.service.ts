@@ -40,10 +40,10 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
     // if the user exists but the password is null,
-    // the user is google oauth2.0 authenticated
+    // the user is google-oauth2.0 authenticated
     if (!user.password && user.googleId) {
       // let them know they are unauthorized
-      // they should use their google accounts to log in
+      // they should use their google-accounts to log in
       throw new UnauthorizedException(
         'Invalid credentials. Login with Google.',
       );
@@ -72,8 +72,8 @@ export class AuthService {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...rest } = user;
-    const _user = rest;
-    return { user: _user };
+
+    return rest;
   }
 
   async signupWithEmailAndPassword(signupUser: SignUpDto) {

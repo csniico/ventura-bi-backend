@@ -8,4 +8,12 @@ export class AppController {
   getRoot(): string {
     return 'Welcome to the Service API!';
   }
+
+  @Get('health')
+  getHealth(): { status: string; timestamp: string } {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
