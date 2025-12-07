@@ -24,13 +24,42 @@ export class MailerService {
     private mailRepository: Repository<Mail>,
     private configService: ConfigService,
   ) {
-    this.transporter = createTransport({
-      service: configService.get<string>('EMAIL_SERVICE', ''),
+    const host = configService.get<string>('EMAIL_HOST', '');
+    const port = configService.get<number>('EMAIL_PORT', 465);
+    const secure = configService.get<boolean>('EMAIL_SECURE', true);
+    const connectionTimeout = configService.get<number>(
+      'EMAIL_CONNECTION_TIMEOUT',
+      100000,
+    );
+    const debug = configService.get<boolean>('EMAIL_DEBUG', true);
+    const transporterOptions = {
+      ...(host
+        ? { host, port, secure }
+        : { service: this.configService.get<string>('EMAIL_SERVICE', '') }),
       auth: {
-        user: configService.get<string>('EMAIL_USER', ''),
-        pass: configService.get<string>('EMAIL_PASSWORD', ''),
+        user: this.configService.get<string>('EMAIL_USER', ''),
+        pass: this.configService.get<string>('EMAIL_PASSWORD', ''),
       },
-    });
+      connectionTimeout: connectionTimeout,
+      debug,
+      tls: {
+        rejectUnauthorized: this.configService.get<boolean>(
+          'EMAIL_TLS_REJECT_UNAUTHORIZED',
+          true,
+        ),
+      },
+    };
+
+    this.transporter = createTransport(transporterOptions);
+    this.transporter
+      .verify()
+      .then(() => {
+        if (debug) console.info('Mailer transporter verified');
+      })
+      .catch((err) => {
+        console.error('Mailer transporter verification failed:', err);
+        // allow app to start; surface connectivity in logs
+      });
   }
 
   private async sendEmail(sendMailDto: SendMailDto) {
@@ -50,16 +79,14 @@ export class MailerService {
         to: to,
         subject: subject,
         html: htmlBody,
-        replyTo: this.configService.get<string>('MAIL_USER'),
+        replyTo: this.configService.get<string>('EMAIL_USER'),
       };
-      if (cc && cc !== '') {
-        mailOptions.cc = cc;
-      }
+      if (cc) mailOptions.cc = cc;
       await this.transporter.sendMail(mailOptions);
       return true;
     } catch (error) {
       console.log(error);
-      throw InternalServerErrorException;
+      throw new InternalServerErrorException('Failed to send email.');
     }
   }
 
