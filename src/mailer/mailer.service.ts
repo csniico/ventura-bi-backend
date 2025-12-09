@@ -4,7 +4,8 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createTransport, Transporter } from 'nodemailer';
+import * as nodemailer from 'nodemailer';
+import { Transporter } from 'nodemailer';
 import { SendMailDto } from './dto/send-mail.dto';
 import { MAILER_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
@@ -19,52 +20,33 @@ import {
 @Injectable()
 export class MailerService {
   private transporter: Transporter;
+
   constructor(
     @Inject(MAILER_REPOSITORY)
     private mailRepository: Repository<Mail>,
     private configService: ConfigService,
-  ) {
-    const host = configService.get<string>('EMAIL_HOST', '');
-    const port = configService.get<number>('EMAIL_PORT', 465);
-    const secure = configService.get<boolean>('EMAIL_SECURE', true);
-    const connectionTimeout = configService.get<number>(
-      'EMAIL_CONNECTION_TIMEOUT',
-      100000,
-    );
-    const debug = configService.get<boolean>('EMAIL_DEBUG', true);
-    const transporterOptions = {
-      ...(host
-        ? { host, port, secure }
-        : { service: this.configService.get<string>('EMAIL_SERVICE', '') }),
-      auth: {
-        user: this.configService.get<string>('EMAIL_USER', ''),
-        pass: this.configService.get<string>('EMAIL_PASSWORD', ''),
-      },
-      connectionTimeout: connectionTimeout,
-      debug,
-      tls: {
-        rejectUnauthorized: this.configService.get<boolean>(
-          'EMAIL_TLS_REJECT_UNAUTHORIZED',
-          true,
-        ),
-      },
-    };
+  ) {}
 
-    this.transporter = createTransport(transporterOptions);
-    this.transporter
-      .verify()
-      .then(() => {
-        if (debug) console.info('Mailer transporter verified');
-      })
-      .catch((err) => {
-        console.error('Mailer transporter verification failed:', err);
-        // allow app to start; surface connectivity in logs
-      });
+  private createTransport() {
+    const host = this.configService.get<string>('EMAIL_HOST');
+    const port = this.configService.get<number>('EMAIL_PORT');
+    const user = this.configService.get<string>('EMAIL_USER');
+    const password = this.configService.get<string>('EMAIL_PASSWORD');
+
+    return nodemailer.createTransport({
+      host: host,
+      port: port,
+      secure: false,
+      auth: {
+        user: user,
+        pass: password,
+      },
+    });
   }
 
-  private async sendEmail(sendMailDto: SendMailDto) {
-    const { to, htmlBody, subject, cc } = sendMailDto;
-    if (!to) {
+  async sendEmail(sendMailDto: SendMailDto) {
+    const { recipients, htmlBody, subject, cc } = sendMailDto;
+    if (!recipients || recipients.length === 0) {
       throw new InternalServerErrorException('Recipient email is required.');
     }
     if (!htmlBody) {
@@ -73,16 +55,21 @@ export class MailerService {
     if (!subject) {
       throw new InternalServerErrorException('Email subject is required.');
     }
+    const transporter = this.createTransport();
+
+    const mailOptions: MailOptions = {
+      from: this.configService.get<string>('EMAIL_USER'),
+      to: recipients,
+      subject: subject,
+      html: htmlBody,
+      replyTo: this.configService.get<string>('EMAIL_USER'),
+    };
+
+    if (cc) mailOptions.cc = cc;
+
     try {
-      const mailOptions: MailOptions = {
-        from: this.configService.get<string>('EMAIL_USER'),
-        to: to,
-        subject: subject,
-        html: htmlBody,
-        replyTo: this.configService.get<string>('EMAIL_USER'),
-      };
-      if (cc) mailOptions.cc = cc;
-      await this.transporter.sendMail(mailOptions);
+      const state = await transporter.sendMail(mailOptions);
+      console.log(state);
       return true;
     } catch (error) {
       console.log(error);
@@ -136,7 +123,7 @@ export class MailerService {
       await this.sendEmail({
         htmlBody: template,
         subject: subject,
-        to: recipientEmail,
+        recipients: [recipientEmail],
       });
     } catch (error: unknown) {
       console.error({

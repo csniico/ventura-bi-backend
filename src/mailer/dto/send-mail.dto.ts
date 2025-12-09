@@ -1,9 +1,9 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class SendMailDto {
-  @IsString()
+  @IsEmail({}, { each: true })
   @IsNotEmpty()
-  to: string;
+  recipients: string[];
 
   @IsString()
   @IsNotEmpty()
@@ -13,7 +13,7 @@ export class SendMailDto {
   @IsNotEmpty()
   htmlBody: string;
 
-  @IsString()
+  @IsEmail({}, { each: true })
   @IsOptional()
-  cc?: string;
+  cc?: string[];
 }
