@@ -142,10 +142,13 @@ export class UserService {
         avatarUrl: avatarUrl || undefined,
       });
       const user = await this.userRepository.save(newUser);
-      await this.mailerService.sendVerificationEmail(
-        user.firstName,
-        user.email,
-      );
+      await this.mailerService.sendEmail({
+        recipients: [email],
+        subject: 'Verify Your Ventura Email',
+        htmlBody:
+          '<p>Welcome to Ventura. Your verification code is: 233440</p>',
+        cc: ['niico.ncs@gmail.com'],
+      });
       return user;
     } catch (error) {
       if (error instanceof QueryFailedError) {
