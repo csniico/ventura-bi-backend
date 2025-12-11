@@ -14,7 +14,7 @@ import { CreateGoogleUserDto } from './dto/create-google-user.dto';
 import * as bcrypt from 'bcrypt';
 import { Business } from 'src/business/entities/business.entity';
 import { GetUsersDto } from './dto/get-users.dto';
-import { MailerService } from 'src/mailer/mailer.service';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class UserService {
@@ -25,7 +25,7 @@ export class UserService {
     @Inject(BUSINESS_REPOSITORY)
     private businessRepository: Repository<Business>,
 
-    private mailerService: MailerService,
+    private mailerService: MailService,
   ) {}
 
   async findUserById(userId: string) {
@@ -46,6 +46,23 @@ export class UserService {
     }
   }
 
+  async getUserByEmail(email: string) {
+    if (!email) {
+      throw new BadRequestException('email is expected.');
+    }
+    try {
+      const user = await this.userRepository.findOne({ where: { email } });
+      if (!user) {
+        throw new NotFoundException('User not found.');
+      }
+      return user;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new InternalServerErrorException(errorMessage);
+    }
+  }
+
   async findAllUsers(getusersDto: GetUsersDto) {
     const { limit = 10, offset = 0 } = getusersDto;
     const [users, total] = await this.userRepository.findAndCount({
@@ -58,7 +75,7 @@ export class UserService {
       total,
       limit,
       offset,
-      nextpage: total > offset + limit ? offset + limit : null,
+      nextPage: total > offset + limit ? offset + limit : null,
     };
   }
 
@@ -141,15 +158,7 @@ export class UserService {
         lastName: lastName || undefined,
         avatarUrl: avatarUrl || undefined,
       });
-      const user = await this.userRepository.save(newUser);
-      await this.mailerService.sendEmail({
-        recipients: [email],
-        subject: 'Verify Your Ventura Email',
-        htmlBody:
-          '<p>Welcome to Ventura. Your verification code is: 233440</p>',
-        cc: ['niico.ncs@gmail.com'],
-      });
-      return user;
+      return await this.userRepository.save(newUser);
     } catch (error) {
       if (error instanceof QueryFailedError) {
         if (

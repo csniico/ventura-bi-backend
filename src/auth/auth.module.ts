@@ -6,13 +6,13 @@ import { UserModule } from 'src/user/user.module';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import jwtConfig from './config/jwt.config';
-import { MailerModule } from 'src/mailer/mailer.module';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
     UserModule,
     JwtModule.registerAsync(jwtConfig.asProvider()),
-    MailerModule,
+    MailModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, GoogleStrategy, LocalStrategy],

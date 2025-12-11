@@ -16,6 +16,7 @@ import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { CreateGoogleUserDto } from 'src/user/dto/create-google-user.dto';
 import { User } from 'src/user/entities/user.entity';
 import { SignUpDto } from './dto/signup.dto';
+import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -65,5 +66,11 @@ export class AuthController {
   @Post('/signup')
   async signup(@Body() signUpUser: SignUpDto) {
     return await this.authService.signupWithEmailAndPassword(signUpUser);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/verify-code')
+  async verifyCode(@Body() payload: VerifyCodeDto) {
+    return await this.authService.verifyEmailWithCode(payload);
   }
 }

@@ -10,12 +10,15 @@ import { JwtService } from '@nestjs/jwt';
 import type { Response } from 'express';
 import { User } from 'src/user/entities/user.entity';
 import { SignUpDto } from './dto/signup.dto';
+import { MailService } from 'src/mail/mail.service';
+import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async validateGoogleUser(googleUser: CreateGoogleUserDto) {
@@ -77,6 +80,20 @@ export class AuthService {
   }
 
   async signupWithEmailAndPassword(signupUser: SignUpDto) {
-    return await this.userService.createUserWithEmailAndPassword(signupUser);
+    const user: User =
+      await this.userService.createUserWithEmailAndPassword(signupUser);
+    const { email, firstName } = user;
+    return await this.mailService.sendVerificationCode({ email, firstName });
+  }
+
+  async verifyEmailWithCode(dto: VerifyCodeDto) {
+    const user = await this.userService.getUserByEmail(dto.email);
+    if (!user) {
+      return new NotFoundException('User not found');
+    }
+    return await this.mailService.validateVerificationCode({
+      ...dto,
+      firstName: user.firstName,
+    });
   }
 }
