@@ -14,6 +14,7 @@ export enum MailStatus {
   FAILED = 'failed',
   DELIVERED = 'delivered',
   BOUNCED = 'bounced',
+  PARTIALLY_SENT = 'partially_sent',
 }
 
 @Entity()
@@ -46,8 +47,11 @@ export class Mail {
   @Column()
   subject: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   htmlBody: string;
+
+  @Column({ nullable: true })
+  verificationCode: string;
 
   @Column({ type: 'enum', enum: MailStatus, default: MailStatus.PENDING })
   status: MailStatus;

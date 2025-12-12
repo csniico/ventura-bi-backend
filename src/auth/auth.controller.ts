@@ -16,6 +16,8 @@ import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { CreateGoogleUserDto } from 'src/user/dto/create-google-user.dto';
 import { User } from 'src/user/entities/user.entity';
 import { SignUpDto } from './dto/signup.dto';
+import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
+import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -66,4 +68,20 @@ export class AuthController {
   async signup(@Body() signUpUser: SignUpDto) {
     return await this.authService.signupWithEmailAndPassword(signUpUser);
   }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/verify-code')
+  async verifyCode(@Body() payload: VerifyCodeDto) {
+    return await this.authService.verifyEmailWithCode(payload);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/resend-code')
+  async resendCode(@Body() dto: ResendCodeDTO) {
+    return await this.authService.resendCode(dto);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/logout')
+  logout() {}
 }

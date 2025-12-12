@@ -1,8 +1,1 @@
-echo "Running pre-push checks..."
-
-# Run tests
-npm run test:e2e || {
-  echo "E2E tests failed. Aborting push."
-  exit 1
-}
-echo "E2E tests passed."
+node .husky/pre-push.js

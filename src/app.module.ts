@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logging.middleware';
 import { InvoiceModule } from './invoice/invoice.module';
@@ -11,13 +11,28 @@ import { OrderModule } from './order/order.module';
 import { BusinessModule } from './business/business.module';
 import { ProductModule } from './product/product.module';
 import { AuthModule } from './auth/auth.module';
-import { MailerModule } from './mailer/mailer.module';
+import { MailModule } from 'src/mail/mail.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       expandVariables: true,
+    }),
+    BullModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST') || 'localhost',
+          port: configService.get<number>('REDIS_PORT') || 6379,
+        },
+        // prefix: configService.get<string>('QUEUE_PREFIX') || 'ventura',
+        defaultJobOptions: {
+          removeOnComplete: { age: 8400 },
+          attempts: 3,
+        },
+      }),
+      inject: [ConfigService],
     }),
     UserModule,
     InvoiceModule,
@@ -27,7 +42,7 @@ import { MailerModule } from './mailer/mailer.module';
     BusinessModule,
     ProductModule,
     AuthModule,
-    MailerModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],
