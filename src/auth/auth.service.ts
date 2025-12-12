@@ -12,6 +12,7 @@ import { User } from 'src/user/entities/user.entity';
 import { SignUpDto } from './dto/signup.dto';
 import { MailService } from 'src/mail/mail.service';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
+import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
 
 @Injectable()
 export class AuthService {
@@ -88,12 +89,33 @@ export class AuthService {
 
   async verifyEmailWithCode(dto: VerifyCodeDto) {
     const user = await this.userService.getUserByEmail(dto.email);
-    if (!user) {
+    if (!user || user instanceof NotFoundException) {
       return new NotFoundException('User not found');
     }
-    return await this.mailService.validateVerificationCode({
+    const isVerified = await this.mailService.validateVerificationCode({
       ...dto,
       firstName: user.firstName,
     });
+    if (isVerified) {
+      return await this.userService.setEmailVerificationState(
+        user.id,
+        user.email,
+        true,
+      );
+    }
+  }
+
+  async resendCode(dto: ResendCodeDTO) {
+    const mail = await this.mailService.getMailById(dto.id);
+    if (!mail) {
+      throw new NotFoundException('Email not found');
+    }
+    const { to: email } = mail;
+    const user = await this.userService.findUserByEmail(email);
+    if (!user) {
+      return new NotFoundException('user does not exist');
+    }
+    const { firstName } = user;
+    return await this.mailService.sendVerificationCode({ email, firstName });
   }
 }

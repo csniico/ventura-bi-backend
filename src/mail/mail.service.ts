@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MAILER_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import { nanoid } from 'nanoid';
@@ -23,6 +17,14 @@ export class MailService {
     private mailRepository: Repository<Mail>,
     @InjectQueue('mail') private readonly mailQueue: Queue,
   ) {}
+
+  async getMailById(id: string) {
+    const mail = await this.mailRepository.findOne({ where: { shortId: id } });
+    if (!mail) {
+      return null;
+    }
+    return mail;
+  }
 
   async updateMailStatus(mailId: string, status: MailStatus, options = {}) {
     if (!mailId) {
@@ -85,9 +87,7 @@ export class MailService {
       });
       if (!mail) {
         this.logger.log(mail);
-        return new BadRequestException(
-          `The request is malformed / has missing data that is required.`,
-        );
+        return false;
       }
       const newMail = this.mailRepository.create({
         to: dto.email,
@@ -99,15 +99,12 @@ export class MailService {
         email: dto.email,
         firstName: dto.firstName,
       });
-      return {
-        message: 'Email verified successfully.',
-        mail,
-      };
+      return true;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.logger.log(errorMessage);
-      throw new InternalServerErrorException(errorMessage);
+      return false;
     }
   }
 
