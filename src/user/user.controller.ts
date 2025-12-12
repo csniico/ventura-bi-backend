@@ -24,6 +24,11 @@ export class UserController {
     return await this.userService.findAllUsers(getusersDto);
   }
 
+  @Get('/:userId')
+  async getUserById(@Param('userId') userId: string) {
+    return await this.userService.findUserById(userId);
+  }
+
   @Patch('/:userId/avatar')
   async updateAvatarUrl(
     @Param('userId') userId: string,
