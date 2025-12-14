@@ -8,6 +8,7 @@ import {
 import { Job } from 'bullmq';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
+import SMTPTransport from 'nodemailer/lib/smtp-transport'; // Import the specific type
 import { ConfigService } from '@nestjs/config';
 import {
   EmailVerificationTemplate,
@@ -45,17 +46,23 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
     super();
   }
 
-  onModuleInit(): any {
+  async onModuleInit(): Promise<any> {
     this.transporter = this.createTransport();
+    try {
+      await this.transporter.verify();
+      this.logger.log('SMTP connection verified successfully');
+    } catch (error) {
+      this.logger.error('SMTP connection verification failed', error);
+    }
   }
 
   async process(job: Job): Promise<any> {
+    this.logger.log(`Processing job ${job.id} of type ${job.name}`);
     try {
-      this.logger.log(`Processing job ${job.id} of type ${job.name}`);
       switch (job.name) {
         case 'verification': {
           const { email, firstName, code, mailId } = job.data as {
-            mailId: string; // shortId of the mail entity
+            mailId: string;
             email?: string;
             firstName?: string;
             code?: string;
@@ -84,8 +91,11 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
         default:
           throw new Error(`Unknown job ${job.name}`);
       }
-    } catch (e) {
-      this.logger.error(e);
+    } catch (e: any) {
+      // Fixed unsafe member access by typing 'e' as any or checking instanceof Error
+      const msg = e instanceof Error ? e.message : String(e);
+      this.logger.error(`Job ${job.id} failed: ${msg}`);
+      throw e;
     }
   }
 
@@ -120,7 +130,6 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
     firstName: string;
     code: string;
   }) {
-    await this.mailService.updateMailStatus(mailId, MailStatus.SENT);
     const htmlBody = this.generateEmailVerificationTemplate(
       firstName,
       code,
@@ -232,7 +241,9 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
       this.logger.error(
         `Failed to send email (mailId: ${mailId}): ${errorMessage}`,
       );
-      throw new InternalServerErrorException('Failed to send email.');
+      throw new InternalServerErrorException(
+        `Failed to send email: ${errorMessage}`,
+      );
     }
   }
 
@@ -244,7 +255,8 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
 
     const secure = port === 465;
 
-    return nodemailer.createTransport({
+    // Explicitly type the options object to satisfy TypeScript
+    const options: SMTPTransport.Options = {
       host,
       port,
       secure,
@@ -252,9 +264,11 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
         user: user,
         pass: password,
       },
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
-    });
+      // Now TypeScript knows this is valid for SMTPTransport.Options
+      debug: true,
+      logger: true,
+    };
+
+    return nodemailer.createTransport(options);
   }
 }

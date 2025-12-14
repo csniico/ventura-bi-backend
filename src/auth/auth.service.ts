@@ -25,12 +25,17 @@ export class AuthService {
   ) {}
 
   async validateGoogleUser(googleUser: CreateGoogleUserDto) {
-    const { googleId } = googleUser;
+    const { email, googleId } = googleUser;
 
     const existingUser = await this.userService.findUserByGoogleId(
       googleId || '',
     );
     if (existingUser) return existingUser;
+
+    const nonGoogleUser = await this.userService.findGoogleUserByEmail(email);
+    if (nonGoogleUser) {
+      throw new UnauthorizedException('Login with email and password');
+    }
 
     return await this.userService.createGoogleUser(googleUser, true);
   }

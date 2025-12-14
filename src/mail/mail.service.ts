@@ -82,7 +82,7 @@ export class MailService {
   async validateVerificationCode(dto: VerifyCodeDto & { firstName: string }) {
     const mail = await this.mailRepository.findOne({
       where: {
-        shortId: dto.id.trim(),
+        shortId: dto.shortToken.trim(),
         to: dto.email.trim(),
         verificationCode: dto.code.trim(),
       },
