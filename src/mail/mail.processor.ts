@@ -242,10 +242,12 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
     const user = this.configService.get<string>('EMAIL_USER');
     const password = this.configService.get<string>('EMAIL_PASSWORD');
 
+    const secure = port === 465;
+
     return nodemailer.createTransport({
-      host: host,
-      port: port,
-      secure: true,
+      host,
+      port,
+      secure,
       auth: {
         user: user,
         pass: password,
