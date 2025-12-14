@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { MAILER_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import { nanoid } from 'nanoid';
@@ -81,13 +86,15 @@ export class MailService {
 
   async validateVerificationCode(dto: VerifyCodeDto & { firstName: string }) {
     try {
-      this.logger.log(dto);
       const mail = await this.mailRepository.findOne({
-        where: { shortId: dto.id, to: dto.email, verificationCode: dto.code },
+        where: {
+          shortId: dto.id.trim(),
+          to: dto.email.trim(),
+          verificationCode: dto.code.trim(),
+        },
       });
       if (!mail) {
-        this.logger.log(mail);
-        return false;
+        return new UnauthorizedException('Invalid verification credentials');
       }
       const newMail = this.mailRepository.create({
         to: dto.email,
