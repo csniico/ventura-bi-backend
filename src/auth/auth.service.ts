@@ -1,5 +1,6 @@
 import {
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { SignUpDto } from './dto/signup.dto';
 import { MailService } from 'src/mail/mail.service';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
+import { QueryFailedError } from 'typeorm';
 
 @Injectable()
 export class AuthService {
@@ -78,10 +80,17 @@ export class AuthService {
   }
 
   async signupWithEmailAndPassword(signupUser: SignUpDto) {
-    const user: User =
-      await this.userService.createUserWithEmailAndPassword(signupUser);
-    const { email, firstName } = user;
-    return await this.mailService.sendVerificationCode({ email, firstName });
+    try {
+      const user: User =
+        await this.userService.createUserWithEmailAndPassword(signupUser);
+      const { email, firstName } = user;
+      await this.mailService.sendVerificationCode({ email, firstName });
+      return user;
+    } catch (error) {
+      const errorMessage =
+        error instanceof QueryFailedError ? error.message : String(error);
+      throw new InternalServerErrorException(errorMessage);
+    }
   }
 
   async verifyEmailWithCode(dto: VerifyCodeDto) {
