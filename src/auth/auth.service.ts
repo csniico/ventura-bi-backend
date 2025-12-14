@@ -23,15 +23,12 @@ export class AuthService {
   ) {}
 
   async validateGoogleUser(googleUser: CreateGoogleUserDto) {
-    const { email, googleId } = googleUser;
+    const { googleId } = googleUser;
 
     const existingUser = await this.userService.findUserByGoogleId(
       googleId || '',
     );
     if (existingUser) return existingUser;
-
-    const user = await this.userService.findGoogleUserByEmail(email);
-    if (user) return user;
 
     return await this.userService.createGoogleUser(googleUser, true);
   }
@@ -70,7 +67,7 @@ export class AuthService {
     res.cookie('access_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'none',
       path: '/',
     });
 
@@ -89,20 +86,21 @@ export class AuthService {
 
   async verifyEmailWithCode(dto: VerifyCodeDto) {
     const user = await this.userService.getUserByEmail(dto.email);
-    if (!user || user instanceof NotFoundException) {
-      return new NotFoundException('User not found');
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
     const isVerified = await this.mailService.validateVerificationCode({
       ...dto,
       firstName: user.firstName,
     });
-    if (isVerified) {
-      return await this.userService.setEmailVerificationState(
-        user.id,
-        user.email,
-        true,
-      );
+    if (!isVerified) {
+      throw new UnauthorizedException('Invalid verification credentials');
     }
+    return await this.userService.setEmailVerificationState(
+      user.id,
+      user.email,
+      true,
+    );
   }
 
   async resendCode(dto: ResendCodeDTO) {

@@ -43,17 +43,11 @@ export class UserService {
     if (!email) {
       throw new BadRequestException('email is expected.');
     }
-    try {
-      const user = await this.userRepository.findOne({ where: { email } });
-      if (!user) {
-        return new NotFoundException('User not found.');
-      }
-      return user;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      throw new InternalServerErrorException(errorMessage);
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
     }
+    return user;
   }
 
   async findAllUsers(getusersDto: GetUsersDto) {
