@@ -84,8 +84,11 @@ export class AuthService {
       const user: User =
         await this.userService.createUserWithEmailAndPassword(signupUser);
       const { email, firstName } = user;
-      await this.mailService.sendVerificationCode({ email, firstName });
-      return user;
+      const { id } = await this.mailService.sendVerificationCode({
+        email,
+        firstName,
+      });
+      return { user, shortToken: id };
     } catch (error) {
       const errorMessage =
         error instanceof QueryFailedError ? error.message : String(error);
