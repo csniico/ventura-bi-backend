@@ -23,8 +23,8 @@ import { BullModule } from '@nestjs/bullmq';
     BullModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         connection: {
-          host: configService.get<string>('REDIS_HOST') || 'localhost',
-          port: configService.get<number>('REDIS_PORT') || 6379,
+          url: configService.get<string>('REDIS_URI'),
+          password: configService.get<string>('REDIS_PASSWORD'),
         },
         // prefix: configService.get<string>('QUEUE_PREFIX') || 'ventura',
         defaultJobOptions: {
