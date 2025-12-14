@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MAILER_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import { nanoid } from 'nanoid';
@@ -85,34 +80,27 @@ export class MailService {
   }
 
   async validateVerificationCode(dto: VerifyCodeDto & { firstName: string }) {
-    try {
-      const mail = await this.mailRepository.findOne({
-        where: {
-          shortId: dto.id.trim(),
-          to: dto.email.trim(),
-          verificationCode: dto.code.trim(),
-        },
-      });
-      if (!mail) {
-        return new UnauthorizedException('Invalid verification credentials');
-      }
-      const newMail = this.mailRepository.create({
-        to: dto.email,
-        subject: WELCOME_EMAIL_SUBJECT,
-      });
-      const savedMail = await this.mailRepository.save(newMail);
-      await this.mailQueue.add('welcome', {
-        mailId: savedMail.shortId,
-        email: dto.email,
-        firstName: dto.firstName,
-      });
-      return true;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      this.logger.log(errorMessage);
+    const mail = await this.mailRepository.findOne({
+      where: {
+        shortId: dto.id.trim(),
+        to: dto.email.trim(),
+        verificationCode: dto.code.trim(),
+      },
+    });
+    if (!mail) {
       return false;
     }
+    const newMail = this.mailRepository.create({
+      to: dto.email,
+      subject: WELCOME_EMAIL_SUBJECT,
+    });
+    const savedMail = await this.mailRepository.save(newMail);
+    await this.mailQueue.add('welcome', {
+      mailId: savedMail.shortId,
+      email: dto.email,
+      firstName: dto.firstName,
+    });
+    return true;
   }
 
   private generateEmailVerificationCode() {

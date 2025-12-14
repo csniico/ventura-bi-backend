@@ -86,17 +86,14 @@ export class AuthService {
 
   async verifyEmailWithCode(dto: VerifyCodeDto) {
     const user = await this.userService.getUserByEmail(dto.email);
-    if (!user || user instanceof NotFoundException) {
-      return new NotFoundException('User not found');
-    }
-    if (user.email !== dto.email) {
-      throw new UnauthorizedException('Invalid email');
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
     const isVerified = await this.mailService.validateVerificationCode({
       ...dto,
       firstName: user.firstName,
     });
-    if (!isVerified || isVerified instanceof UnauthorizedException) {
+    if (!isVerified) {
       throw new UnauthorizedException('Invalid verification credentials');
     }
     return await this.userService.setEmailVerificationState(
