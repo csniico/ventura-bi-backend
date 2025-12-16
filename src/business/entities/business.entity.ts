@@ -5,8 +5,8 @@ import {
   DeleteDateColumn,
   Entity,
   JoinColumn,
-  ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -81,17 +81,16 @@ export class Business {
   @Column({ type: 'simple-array', default: [] })
   categories: string[];
 
-  // Owner relationship - user who created/owns the business
-  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'owner_id' })
+  // One-to-One: Business has ONE owner
+  @OneToOne(() => User, (user) => user.business, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'owner_id' }) // Foreign key lives in Business table
   owner: User;
 
   @Column()
   ownerId: string;
-
-  // Employees - users who work for this business
-  @OneToMany(() => User, (user) => user.employerBusiness)
-  employees: User[];
 
   // Relationships
   @OneToMany(() => Appointment, (appointment) => appointment.business)

@@ -4,11 +4,9 @@ import {
   Column,
   DeleteDateColumn,
   Entity,
-  JoinColumn,
   JoinTable,
   ManyToMany,
-  ManyToOne,
-  OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -49,17 +47,15 @@ export class User {
   @Column({ nullable: true })
   avatarUrl: string;
 
-  // Business relationship - business where user works (employee)
-  @ManyToOne(() => Business, (business) => business.employees, {
+  // One-to-One: User owns ONE business
+  @OneToOne(() => Business, (business) => business.owner, {
     nullable: true,
-    onDelete: 'SET NULL',
+    cascade: true,
   })
-  @JoinColumn({ name: 'employer_business_id' })
-  employerBusiness: Business;
+  business: Business;
 
-  // Owned businesses - businesses created/owned by this user
-  @OneToMany(() => Business, (business) => business.owner)
-  ownedBusinesses: Business[];
+  @Column({ nullable: true })
+  businessId: string; // Foreign key reference
 
   // Roles assigned to user (permanent)
   @ManyToMany(() => Role, { cascade: true, onDelete: 'CASCADE' })
