@@ -1,6 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { QueryFailedError } from 'typeorm';
 
 @Injectable()
 export class AuthService {
+  private logger = new Logger(AuthService.name);
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
@@ -42,9 +44,12 @@ export class AuthService {
 
   async validateUserWithEmailAndPassword(loginDto: LoginDto) {
     const { email, password } = loginDto;
+    this.logger.log(
+      `Validating user with email: ${email} and password: ${password}`,
+    );
     const user = await this.userService.findUserByEmail(email, true);
     if (!user) {
-      console.log({ user });
+      this.logger.log(`user not found with email: ${email}, user: ${user}`);
       throw new NotFoundException('User not found');
     }
     // if the user exists but the password is null,
@@ -52,6 +57,9 @@ export class AuthService {
     if (!user.password && user.googleId) {
       // let them know they are unauthorized
       // they should use their google-accounts to log in
+      this.logger.log(
+        `user with email: ${email} has googleId: ${user.googleId}`,
+      );
       throw new UnauthorizedException(
         'Invalid credentials. Login with Google.',
       );
@@ -61,9 +69,11 @@ export class AuthService {
       user.password,
     );
     if (!isPasswordMatch) {
+      this.logger.log(`password mismatch for user with email: ${email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    this.logger.log(`user validated with email: ${email}`);
     return { userData: user };
   }
 
