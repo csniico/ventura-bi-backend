@@ -18,6 +18,7 @@ import { User } from 'src/user/entities/user.entity';
 import { SignUpDto } from './dto/signup.dto';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
+import { ConfirmEmailDto } from 'src/auth/dto/confirm-email.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -79,6 +80,12 @@ export class AuthController {
   @Post('/resend-code')
   async resendCode(@Body() dto: ResendCodeDTO) {
     return await this.authService.resendCode(dto);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/confirm-email')
+  confirmEmailAndSendVerificationCode(@Body() dto: ConfirmEmailDto) {
+    return this.authService.confirmEmailAndSendVerificationCode(dto.email);
   }
 
   @HttpCode(HttpStatus.OK)

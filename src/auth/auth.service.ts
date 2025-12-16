@@ -111,6 +111,15 @@ export class AuthService {
     }
   }
 
+  async confirmEmailAndSendVerificationCode(email: string) {
+    const user = await this.userService.getUserByEmail(email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const { firstName } = user;
+    return await this.mailService.sendVerificationCode({ email, firstName });
+  }
+
   async verifyEmailWithCode(dto: VerifyCodeDto) {
     const user = await this.userService.getUserByEmail(dto.email);
     if (!user) {
