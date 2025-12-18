@@ -72,12 +72,17 @@ export class AuthService {
       this.logger.log(`password mismatch for user with email: ${email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
+    this.logger.log(`is email verified: ${user.isEmailVerified}`);
 
     this.logger.log(`user validated with email: ${email}`);
     return { userData: user };
   }
 
-  login(userId: string, user: User & { password?: string }, res: Response) {
+  async login(
+    userId: string,
+    user: User & { password?: string },
+    res: Response,
+  ) {
     const payload = { sub: userId };
     const token = this.jwtService.sign(payload);
 
@@ -87,6 +92,15 @@ export class AuthService {
       sameSite: 'none',
       path: '/',
     });
+
+    this.logger.log(`is email verified: ${user.isEmailVerified}`);
+
+    if (!user.isEmailVerified) {
+      await this.mailService.sendVerificationCode({
+        email: user.email,
+        firstName: user.firstName,
+      });
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...rest } = user;
@@ -151,5 +165,9 @@ export class AuthService {
     }
     const { firstName } = user;
     return await this.mailService.sendVerificationCode({ email, firstName });
+  }
+
+  async forgotPassword(newPassword: string, userId: string) {
+    return await this.userService.resetPassword(newPassword, userId);
   }
 }

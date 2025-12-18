@@ -80,13 +80,23 @@ export class MailService {
   }
 
   async validateVerificationCode(dto: VerifyCodeDto & { firstName: string }) {
-    const mail = await this.mailRepository.findOne({
-      where: {
-        shortId: dto.shortToken.trim(),
-        to: dto.email.trim(),
-        verificationCode: dto.code.trim(),
-      },
-    });
+    let mail: Mail | null;
+    if (dto.shortToken.trim() === 'login') {
+      mail = await this.mailRepository.findOne({
+        where: {
+          to: dto.email.trim(),
+          verificationCode: dto.code.trim(),
+        },
+      });
+    } else {
+      mail = await this.mailRepository.findOne({
+        where: {
+          shortId: dto.shortToken.trim(),
+          to: dto.email.trim(),
+          verificationCode: dto.code.trim(),
+        },
+      });
+    }
     if (!mail) {
       return false;
     }

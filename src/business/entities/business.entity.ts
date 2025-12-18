@@ -17,6 +17,15 @@ import { Invoice } from 'src/invoice/entities/invoice.entity';
 import { Product } from 'src/product/entities/product.entity';
 import { Order } from 'src/order/entities/order.entity';
 
+/**
+ * contact information ( email, phone-number, address, city, state, country)
+ * business name
+ * business category -> [food & drink, services, supplier, apparel, retail, other]
+ * business description ( nullable )
+ * business tagline (nullable)
+ * business logo (nullable)
+ */
+
 @Entity()
 export class Business {
   @PrimaryGeneratedColumn('uuid')
@@ -38,17 +47,20 @@ export class Business {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ type: 'text', nullable: true })
+  tagLine: string;
+
+  @Column({ nullable: true })
+  logo: string;
+
   @Column({ unique: true })
   email: string;
 
-  @Column({ nullable: true })
+  @Column()
   phone: string;
 
   @Column({ nullable: true })
   website: string;
-
-  @Column({ nullable: true })
-  logo: string;
 
   // Address fields
   @Column({ nullable: true })
@@ -62,9 +74,6 @@ export class Business {
 
   @Column({ nullable: true })
   country: string;
-
-  @Column({ nullable: true })
-  zipCode: string;
 
   // Business details
   @Column({ nullable: true })

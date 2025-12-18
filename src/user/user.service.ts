@@ -69,14 +69,12 @@ export class UserService {
   async findGoogleUserByEmail(googleUserEmail: string) {
     return this.userRepository.findOne({
       where: { email: googleUserEmail },
-      relations: ['ownedBusinesses', 'employerBusiness'],
     });
   }
 
   async findUserByGoogleId(googleId: string) {
     return await this.userRepository.findOne({
       where: { googleId },
-      relations: ['ownedBusinesses', 'employerBusiness'],
     });
   }
 
@@ -235,15 +233,15 @@ export class UserService {
 
   async updatePassword(
     oldPassword: string,
-    newpassword: string,
+    newPassword: string,
     userId: string,
   ) {
     try {
       if (!oldPassword) {
         return new BadRequestException('oldPassword is expected.');
       }
-      if (!newpassword) {
-        return new BadRequestException('newpassword is expected.');
+      if (!newPassword) {
+        return new BadRequestException('newPassword is expected.');
       }
       if (!userId) {
         return new BadRequestException('userId is expected.');
@@ -263,7 +261,7 @@ export class UserService {
       if (!isPasswordMatch) {
         return new BadRequestException('Old password does not match.');
       }
-      user.password = await this.hashPassword(newpassword);
+      user.password = await this.hashPassword(newPassword);
       await this.userRepository.save(user);
       return user;
     } catch (error) {

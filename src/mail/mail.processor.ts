@@ -265,8 +265,8 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
         pass: password,
       },
       // Now TypeScript knows this is valid for SMTPTransport.Options
-      debug: true,
-      logger: true,
+      // debug: true,
+      // logger: true,
     };
 
     return nodemailer.createTransport(options);
