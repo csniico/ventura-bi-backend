@@ -21,9 +21,18 @@ export class UserService {
     private userRepository: Repository<User>,
   ) {}
 
+  async saveUser(user: User): Promise<User> {
+    return await this.userRepository.save(user);
+  }
+
   async findUserById(userId: string) {
     if (!userId) {
       throw new BadRequestException('userId is expected.');
+    }
+    const uuidV4Regex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidV4Regex.test(userId)) {
+      throw new BadRequestException('userId must be a valid UUID v4.');
     }
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -32,6 +41,7 @@ export class UserService {
       }
       return user;
     } catch (error) {
+      console.log(error);
       if (error instanceof QueryFailedError) {
         throw new InternalServerErrorException('Database error occurred.');
       }

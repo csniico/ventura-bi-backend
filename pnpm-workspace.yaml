@@ -1,5 +1,7 @@
 packages:
-  - '.'
+  - .
 
 onlyBuiltDependencies:
+  - ffmpeg-static
   - msgpackr-extract
+  - sharp

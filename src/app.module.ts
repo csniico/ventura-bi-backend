@@ -13,6 +13,7 @@ import { ProductModule } from './product/product.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from 'src/mail/mail.module';
 import { BullModule } from '@nestjs/bullmq';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { BullModule } from '@nestjs/bullmq';
     ProductModule,
     AuthModule,
     MailModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

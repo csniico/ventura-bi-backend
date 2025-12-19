@@ -22,6 +22,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.955.0",
     "@faker-js/faker": "^10.1.0",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
@@ -36,6 +37,10 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "mime-types": "^3.0.2",
     "nanoid": "^5.1.6",
     "nodemailer": "^7.0.11",
     "passport": "^0.7.0",
@@ -44,7 +49,9 @@
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm-extension": "^3.7.1"
+    "sharp": "^0.34.5",
+    "typeorm-extension": "^3.7.1",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.2.0",
@@ -59,6 +66,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",
     "@types/nodemailer": "^7.0.4",
     "@types/passport-google-oauth20": "^2.0.17",

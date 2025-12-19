@@ -19,7 +19,12 @@ export class BusinessController {
 
   @Post('/')
   async create(@Body() dto: CreateBusinessDto) {
-    return await this.businessService.create(dto);
+    try {
+      return await this.businessService.create(dto);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   @Put('/:id')
