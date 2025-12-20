@@ -34,19 +34,12 @@ export class UserService {
     if (!uuidV4Regex.test(userId)) {
       throw new BadRequestException('userId must be a valid UUID v4.');
     }
-    try {
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-      if (!user) {
-        return new NotFoundException('User not found.');
-      }
-      return user;
-    } catch (error) {
-      console.log(error);
-      if (error instanceof QueryFailedError) {
-        throw new InternalServerErrorException('Database error occurred.');
-      }
-      throw new InternalServerErrorException('Something went wrong');
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
     }
+    return user;
   }
 
   async getUserByEmail(email: string) {

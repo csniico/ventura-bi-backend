@@ -4,15 +4,9 @@ import {
   Column,
   DeleteDateColumn,
   Entity,
-  JoinTable,
-  ManyToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Role } from './role.entity';
-import { Permission } from './permission.entity';
-import { Business } from 'src/business/entities/business.entity';
 
 @Entity()
 export class User {
@@ -47,36 +41,8 @@ export class User {
   @Column({ nullable: true })
   avatarUrl: string;
 
-  // One-to-One: User owns ONE business
-  @OneToOne(() => Business, (business) => business.owner, {
-    nullable: true,
-    cascade: true,
-  })
-  business: Business;
-
   @Column({ nullable: true })
-  businessId: string; // Foreign key reference
-
-  // Roles assigned to user (permanent)
-  @ManyToMany(() => Role, { cascade: true, onDelete: 'CASCADE' })
-  @JoinTable({
-    name: 'user_roles',
-    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
-  })
-  roles: Role[];
-
-  // Direct permissions (temporary overrides)
-  @ManyToMany(() => Permission, (permission) => permission.users, {
-    cascade: true,
-    onDelete: 'CASCADE',
-  })
-  @JoinTable({
-    name: 'user_permissions',
-    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'permission_id', referencedColumnName: 'id' },
-  })
-  directPermissions: Permission[];
+  businessId: string;
 
   @Column({ default: false })
   isSystem: boolean;

@@ -4,12 +4,8 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logging.middleware';
-import { InvoiceModule } from './invoice/invoice.module';
 import { AppointmentModule } from './appointment/appointment.module';
-import { CustomerModule } from './customer/customer.module';
-import { OrderModule } from './order/order.module';
 import { BusinessModule } from './business/business.module';
-import { ProductModule } from './product/product.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from 'src/mail/mail.module';
 import { BullModule } from '@nestjs/bullmq';
@@ -36,12 +32,8 @@ import { StorageModule } from './storage/storage.module';
       inject: [ConfigService],
     }),
     UserModule,
-    InvoiceModule,
     AppointmentModule,
-    CustomerModule,
-    OrderModule,
     BusinessModule,
-    ProductModule,
     AuthModule,
     MailModule,
     StorageModule,

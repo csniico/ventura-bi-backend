@@ -36,9 +36,9 @@ export class BusinessService {
     });
   }
 
-  async findOne(id: string): Promise<Business | null> {
+  async findOne(businessId: string) {
     const business = await this.businessRepository.findOne({
-      where: { id },
+      where: { id: businessId },
       select: [
         'id',
         'shortId',
@@ -75,20 +75,17 @@ export class BusinessService {
       );
     }
     const user = await this.userService.findUserById(ownerId);
-    if (!user || user instanceof NotFoundException) {
+    if (!user) {
       throw new NotFoundException('user not found');
     }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, shortId, ...rest } = data;
 
     const newBusiness = this.businessRepository.create(rest);
-
-    newBusiness.owner = user;
-    user.businessId = newBusiness.id;
-
-    await this.userService.saveUser(user);
     await this.businessRepository.save(newBusiness);
 
+    user.businessId = newBusiness.id;
+    await this.userService.saveUser(user);
     const business = await this.findOne(newBusiness.id);
     if (!business) {
       throw new NotFoundException('business not found');

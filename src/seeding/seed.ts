@@ -1,16 +1,7 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { runSeeders, SeederOptions } from 'typeorm-extension';
 import { config } from 'dotenv';
-import { PermissionFactory } from './permission.factory';
-import { RoleFactory } from './role.factory';
 import { UserFactory } from './user.factory';
-import { BusinessFactory } from './business.factory';
-import { CustomerFactory } from './customer.factory';
-import { ProductFactory } from './products.factory';
-import { AppointmentFactory } from './appointment.factory';
-import { OrderFactory } from './order.factory';
-import { OrderItemFactory } from './order-item.factory';
-import { InvoiceFactory } from './invoice.factory';
 import { MainSeeder } from './main.seeder';
 
 // Load environment variables
@@ -32,18 +23,7 @@ const options: DataSourceOptions & SeederOptions = {
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
 
   seeds: [MainSeeder],
-  factories: [
-    PermissionFactory,
-    RoleFactory,
-    UserFactory,
-    BusinessFactory,
-    CustomerFactory,
-    ProductFactory,
-    AppointmentFactory,
-    OrderFactory,
-    OrderItemFactory,
-    InvoiceFactory,
-  ],
+  factories: [UserFactory],
 };
 
 const dataSource = new DataSource(options);

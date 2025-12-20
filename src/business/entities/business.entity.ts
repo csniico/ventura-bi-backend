@@ -4,18 +4,9 @@ import {
   Column,
   DeleteDateColumn,
   Entity,
-  JoinColumn,
-  OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { User } from 'src/user/entities/user.entity';
-import { Appointment } from 'src/appointment/entities/appointment.entity';
-import { Customer } from 'src/customer/entities/customer.entity';
-import { Invoice } from 'src/invoice/entities/invoice.entity';
-import { Product } from 'src/product/entities/product.entity';
-import { Order } from 'src/order/entities/order.entity';
 
 /**
  * contact information ( email, phone-number, address, city, state, country)
@@ -90,32 +81,8 @@ export class Business {
   @Column({ type: 'simple-array', default: [] })
   categories: string[];
 
-  // One-to-One: Business has ONE owner
-  @OneToOne(() => User, (user) => user.business, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'owner_id' }) // Foreign key lives in Business table
-  owner: User;
-
   @Column()
   ownerId: string;
-
-  // Relationships
-  @OneToMany(() => Appointment, (appointment) => appointment.business)
-  appointments: Appointment[];
-
-  @OneToMany(() => Customer, (customer) => customer.business)
-  customers: Customer[];
-
-  @OneToMany(() => Invoice, (invoice) => invoice.business)
-  invoices: Invoice[];
-
-  @OneToMany(() => Product, (product) => product.business)
-  products: Product[];
-
-  @OneToMany(() => Order, (order) => order.business)
-  orders: Order[];
 
   @Column({ default: true })
   isActive: boolean;
