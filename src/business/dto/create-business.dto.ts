@@ -4,6 +4,8 @@ import {
   IsOptional,
   IsArray,
   IsNotEmpty,
+  IsEmpty,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateBusinessDto {
@@ -20,8 +22,10 @@ export class CreateBusinessDto {
   @IsNotEmpty()
   name: string;
 
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email format' })
   @IsOptional()
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  @ValidateIf((o) => o.email !== '')
   email?: string;
 
   @IsString()
@@ -55,4 +59,14 @@ export class CreateBusinessDto {
   @IsString()
   @IsOptional()
   address?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsEmpty()
+  id: string;
+
+  @IsString()
+  @IsOptional()
+  @IsEmpty()
+  shortId: string;
 }

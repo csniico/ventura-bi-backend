@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { BUSINESS_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import { Business } from 'src/business/entities/business.entity';
@@ -15,25 +20,80 @@ export class BusinessService {
   ) {}
 
   async findAll(): Promise<Business[]> {
-    return this.businessRepository.find();
+    return await this.businessRepository.find({
+      select: [
+        'id',
+        'shortId',
+        'name',
+        'email',
+        'phone',
+        'address',
+        'city',
+        'state',
+        'country',
+        'ownerId',
+      ],
+    });
   }
 
   async findOne(id: string): Promise<Business | null> {
-    return await this.businessRepository.findOneBy({ id });
+    const business = await this.businessRepository.findOne({
+      where: { id },
+      select: [
+        'id',
+        'shortId',
+        'name',
+        'email',
+        'phone',
+        'address',
+        'city',
+        'state',
+        'country',
+        'ownerId',
+        'logo',
+        'categories',
+        'tagLine',
+        'description',
+      ],
+    });
+
+    if (!business) {
+      throw new NotFoundException('business not found');
+    }
+
+    return business;
   }
 
   async create(data: CreateBusinessDto): Promise<Business> {
-    console.log({ data });
     const { ownerId } = data;
+    const existingBusiness = await this.businessRepository.findOne({
+      where: { ownerId },
+    });
+    if (existingBusiness !== null) {
+      throw new BadRequestException(
+        'cannot create business, business already exists!',
+      );
+    }
     const user = await this.userService.findUserById(ownerId);
     if (!user || user instanceof NotFoundException) {
       throw new NotFoundException('user not found');
     }
-    const newBusiness = this.businessRepository.create(data);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, shortId, ...rest } = data;
+
+    const newBusiness = this.businessRepository.create(rest);
+
     newBusiness.owner = user;
     user.businessId = newBusiness.id;
+
     await this.userService.saveUser(user);
-    return await this.businessRepository.save(newBusiness);
+    await this.businessRepository.save(newBusiness);
+
+    const business = await this.findOne(newBusiness.id);
+    if (!business) {
+      throw new NotFoundException('business not found');
+    }
+    return business;
   }
 
   async update(id: string, data: UpdateBusinessDto): Promise<Business | null> {

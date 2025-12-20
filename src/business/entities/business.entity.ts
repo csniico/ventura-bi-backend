@@ -53,10 +53,10 @@ export class Business {
   @Column({ nullable: true })
   logo: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   phone: string;
 
   @Column({ nullable: true })
