@@ -109,7 +109,7 @@ export class AppointmentService {
         'No appointment found for the supplied user.',
       );
     }
-    return appointment;
+    return appointment.reverse();
   }
 
   async findByBusinessId(businessId: string) {
@@ -175,19 +175,20 @@ export class AppointmentService {
     appointmentId: string;
     partials: UpdateAppointmentDto;
   }) {
-    const { userId, businessId, title, startTime, endTime, isRecurring } =
-      partials;
-    if (
-      !userId ||
-      !businessId ||
-      !title ||
-      startTime ||
-      endTime ||
-      isRecurring
-    ) {
-      throw new BadRequestException(
-        'missing one or more of [userId, businessId, title, startTime, endTime, isRecurring]',
+    if (!appointmentId) {
+      throw new NotFoundException(
+        'Appointment with id ${appointmentId} not found',
       );
+    }
+    this.logger.log({ partials });
+    if (!partials.userId || !partials.businessId || !partials.title) {
+      throw new BadRequestException(
+        'one of [userId, businessId, title] is required',
+      );
+    }
+    const { userId, businessId, title, startTime, endTime } = partials;
+    if (!userId || !businessId || !title || !startTime || !endTime) {
+      throw new BadRequestException('missing one or more required fields');
     }
     await this.authorizeRequest(userId, businessId);
     const appointment = await this.appointmentRepository.findOne({
@@ -198,7 +199,16 @@ export class AppointmentService {
         `Appointment with id ${appointmentId} not found`,
       );
     }
-    return await this.appointmentRepository.updateAll(partials);
+    await this.appointmentRepository.updateAll(partials);
+    const updatedAppointment = await this.appointmentRepository.findOne({
+      where: { id: appointmentId },
+    });
+    if (!updatedAppointment) {
+      throw new NotFoundException(
+        'Appointment with id ${appointmentId} not found',
+      );
+    }
+    return updatedAppointment;
   }
 
   async delete({

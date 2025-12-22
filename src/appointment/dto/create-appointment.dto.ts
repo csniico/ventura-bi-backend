@@ -10,14 +10,14 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
-enum RecurringSchedule {
+export enum RecurringSchedule {
   DAILY = 'daily',
   MONTHLY = 'monthly',
   WEEKLY = 'weekly',
   YEARLY = 'yearly',
 }
 
-class Recurrence {
+export class Recurrence {
   @IsString()
   @IsNotEmpty()
   until: string;

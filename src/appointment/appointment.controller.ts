@@ -51,7 +51,7 @@ export class AppointmentController {
     }
   }
 
-  @Patch('/:id')
+  @Patch('/google-event/:id')
   async updateGoogleEventId(
     @Param('id') id: string,
     @Body() dto: UpdateGoogleEvent,
@@ -68,7 +68,10 @@ export class AppointmentController {
   }
 
   @Put('/:id')
-  async updateAppointment(@Param('id') id: string, dto: UpdateAppointmentDto) {
+  async updateAppointment(
+    @Param('id') id: string,
+    @Body() dto: UpdateAppointmentDto,
+  ) {
     try {
       return this.appointmentService.updateAppointment({
         appointmentId: id,
