@@ -10,10 +10,12 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
-export enum RecurringSchedule {
+export enum RecurringFrequency {
   DAILY = 'daily',
   MONTHLY = 'monthly',
+  BI_MONTHLY = 'bi-monthly',
   WEEKLY = 'weekly',
+  BI_WEEKLY = 'bi-weekly',
   YEARLY = 'yearly',
 }
 
@@ -24,7 +26,7 @@ export class Recurrence {
 
   @IsString()
   @IsNotEmpty()
-  schedule: RecurringSchedule;
+  frequency: RecurringFrequency;
 }
 
 export class CreateAppointmentDto {

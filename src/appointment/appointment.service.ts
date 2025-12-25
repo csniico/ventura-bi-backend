@@ -137,6 +137,7 @@ export class AppointmentService {
   }
 
   async create(dto: CreateAppointmentDto) {
+    this.logger.log({ dto });
     const { userId, businessId } = dto;
     await this.authorizeRequest(userId, businessId);
     const appointment = this.appointmentRepository.create(dto);
