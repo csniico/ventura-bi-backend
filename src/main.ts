@@ -28,11 +28,18 @@ function getLocalIpAddress(): string {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+  const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS', '*');
 
   app.use(cookieParser());
   app.enableCors({
-    origin: ['*'],
+    origin:
+      allowedOrigins === '*'
+        ? '*'
+        : allowedOrigins.split(',').map((origin) => origin.trim()),
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
   app.enableShutdownHooks();
@@ -63,7 +70,6 @@ async function bootstrap() {
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, swaggerDocument);
 
-  const configService = app.get(ConfigService);
   const port = configService.get<number>('SERVER_PORT', 3000);
 
   await app.listen(port, '0.0.0.0'); // Listen on all network interfaces

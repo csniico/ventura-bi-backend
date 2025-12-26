@@ -8,6 +8,7 @@ import { Mail, MailStatus } from 'src/mail/entities/mail.entity';
 import { VERIFICATION_EMAIL_SUBJECT } from 'src/mail/templates/email-verification-template';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { WELCOME_EMAIL_SUBJECT } from 'src/mail/templates/welcome-template';
+import { SendMailDto } from 'src/mail/dto/send-mail.dto';
 
 @Injectable()
 export class MailService {
@@ -17,6 +18,23 @@ export class MailService {
     private mailRepository: Repository<Mail>,
     @InjectQueue('mail') private readonly mailQueue: Queue,
   ) {}
+
+  async sendEmail(dto: SendMailDto) {
+    const mail = this.mailRepository.create({
+      to: dto.recipients.toString(),
+      subject: dto.subject,
+      from: 'system',
+      htmlBody: dto.htmlBody,
+    });
+
+    await this.mailRepository.save(mail);
+    return await this.mailQueue.add('send-email', {
+      mailId: mail.shortId,
+      to: dto.recipients,
+      subject: dto.subject,
+      htmlBody: dto.htmlBody,
+    });
+  }
 
   async getMailById(id: string) {
     const mail = await this.mailRepository.findOne({ where: { shortId: id } });

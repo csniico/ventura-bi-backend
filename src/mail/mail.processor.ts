@@ -60,6 +60,19 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
     this.logger.log(`Processing job ${job.id} of type ${job.name}`);
     try {
       switch (job.name) {
+        case 'send-email': {
+          const { to, subject, htmlBody, mailId } = job.data as {
+            to: string[];
+            subject: string;
+            htmlBody: string;
+            mailId: string;
+          };
+          return await this.sendMail(mailId, {
+            recipients: to,
+            htmlBody: htmlBody,
+            subject: subject,
+          });
+        }
         case 'verification': {
           const { email, firstName, code, mailId } = job.data as {
             mailId: string;
@@ -84,12 +97,12 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
             firstName: string;
           };
           if (!email || !mailId) {
-            throw new Error('Invalid queue data');
+            return new Error('Invalid queue data');
           }
           return await this.sendWelcomeEmail({ email, mailId, firstName });
         }
         default:
-          throw new Error(`Unknown job ${job.name}`);
+          return new Error(`Unknown job ${job.name}`);
       }
     } catch (e: any) {
       // Fixed unsafe member access by typing 'e' as any or checking instanceof Error

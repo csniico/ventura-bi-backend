@@ -8,9 +8,6 @@ export class MailController {
 
   @Post('/send-email')
   async sendEmail(@Body() dto: SendMailDto) {
-    return await this.mailService.sendVerificationCode({
-      email: dto.recipients[0],
-      firstName: 'Kelvin',
-    });
+    return await this.mailService.sendEmail(dto);
   }
 }
