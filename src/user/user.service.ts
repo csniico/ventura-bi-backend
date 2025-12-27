@@ -35,7 +35,10 @@ export class UserService {
       throw new BadRequestException('userId must be a valid UUID v4.');
     }
 
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['business'],
+    });
     if (!user) {
       throw new NotFoundException('User not found.');
     }
@@ -46,7 +49,10 @@ export class UserService {
     if (!email) {
       throw new BadRequestException('email is expected.');
     }
-    const user = await this.userRepository.findOne({ where: { email } });
+    const user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['business'],
+    });
     if (!user) {
       throw new NotFoundException('User not found.');
     }
@@ -78,6 +84,7 @@ export class UserService {
   async findUserByGoogleId(googleId: string) {
     return await this.userRepository.findOne({
       where: { googleId },
+      relations: ['business'],
     });
   }
 
@@ -85,11 +92,13 @@ export class UserService {
     if (!password) {
       return await this.userRepository.findOne({
         where: { email: userEmail },
+        relations: ['business'],
       });
     }
 
     return await this.userRepository
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.business', 'business')
       .addSelect('user.password')
       .where('user.email = :email', { email: userEmail })
       .getOne();
@@ -166,6 +175,7 @@ export class UserService {
     try {
       const user = await this.userRepository.findOne({
         where: { id: userId, email: email },
+        relations: ['business'],
       });
       if (!user) {
         return new NotFoundException('User not found.');
@@ -181,48 +191,37 @@ export class UserService {
     }
   }
 
-  async updateAvatarUrl(avatarUrl: string, userId: string) {
+  async updateUserProfile({
+    firstName,
+    userId,
+    lastName,
+    avatarUrl,
+  }: {
+    firstName: string;
+    userId: string;
+    lastName?: string;
+    avatarUrl?: string;
+  }) {
     try {
-      if (!userId) {
-        return new BadRequestException('userId is expected.');
-      }
-      if (!avatarUrl) {
-        return new BadRequestException('avatarurl is expected.');
-      }
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-      if (!user) {
-        return new NotFoundException('User not found.');
-      }
-      user.avatarUrl = avatarUrl;
-      await this.userRepository.save(user);
-      return user;
-    } catch (error) {
-      if (error instanceof QueryFailedError) {
-        throw new InternalServerErrorException('Database error occurred.');
-      }
-      throw new InternalServerErrorException('Something went wrong');
-    }
-  }
-
-  async updateFirstnameAndLastname(
-    firstname: string,
-    userId: string,
-    lastname?: string,
-  ) {
-    try {
-      if (!firstname) {
-        return new BadRequestException('firstname is expected.');
+      if (!firstName) {
+        return new BadRequestException('firstName is expected.');
       }
       if (!userId) {
         return new BadRequestException('userId is expected.');
       }
-      const user = await this.userRepository.findOne({ where: { id: userId } });
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ['business'],
+      });
       if (!user) {
         return new NotFoundException('User not found.');
       }
-      user.firstName = firstname;
-      if (lastname !== undefined) {
-        user.lastName = lastname;
+      user.firstName = firstName;
+      if (lastName !== undefined) {
+        user.lastName = lastName;
+      }
+      if (avatarUrl !== undefined) {
+        user.avatarUrl = avatarUrl;
       }
       await this.userRepository.save(user);
       return user;
@@ -253,6 +252,7 @@ export class UserService {
         .createQueryBuilder('user')
         .addSelect('password')
         .where('user.id = :id', { id: userId })
+        .leftJoinAndSelect('user.business', 'business')
         .getOne();
       if (!user) {
         return new NotFoundException('User not found.');
@@ -284,7 +284,10 @@ export class UserService {
     }
 
     try {
-      const user = await this.userRepository.findOne({ where: { id: userId } });
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ['business'],
+      });
       if (!user) {
         return new NotFoundException('User not found.');
       }

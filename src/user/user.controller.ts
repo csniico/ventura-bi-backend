@@ -10,8 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { UpdateAvatarDto } from './dto/update-avatar.dto';
-import { UpdateNameDto } from './dto/update-name.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GetUsersDto } from './dto/get-users.dto';
@@ -30,33 +29,22 @@ export class UserController {
     return await this.userService.findUserById(userId);
   }
 
-  @Patch('/:userId/avatar')
-  async updateAvatarUrl(
+  @Patch('/profile/:userId/')
+  async updateUserProfile(
     @Param('userId') userId: string,
-    @Body() updateAvatarDto: UpdateAvatarDto,
+    @Body() updateProfileDto: UpdateProfileDto,
   ) {
-    const { avatarUrl } = updateAvatarDto;
-    if (!avatarUrl || !userId) {
-      throw new BadRequestException('avatarUrl and userId are required');
-    }
-    return await this.userService.updateAvatarUrl(avatarUrl, userId);
-  }
-
-  @Patch('/:userId/name')
-  async updateFirstnameAndLastname(
-    @Param('userId') userId: string,
-    @Body() updateNameDto: UpdateNameDto,
-  ) {
-    const { firstName, lastName } = updateNameDto;
+    const { firstName, lastName, avatarUrl } = updateProfileDto;
     if (!firstName || !userId) {
       throw new BadRequestException('firstName and userId are required');
     }
 
-    return await this.userService.updateFirstnameAndLastname(
+    return await this.userService.updateUserProfile({
       firstName,
       userId,
       lastName,
-    );
+      avatarUrl,
+    });
   }
 
   @Post('/:userId/change-password')

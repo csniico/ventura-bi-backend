@@ -4,9 +4,12 @@ import {
   Column,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Business } from 'src/business/entities/business.entity';
 
 @Entity()
 export class User {
@@ -43,6 +46,10 @@ export class User {
 
   @Column({ nullable: true })
   businessId: string;
+
+  @OneToOne(() => Business, (business) => business.user, { nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business: Business;
 
   @Column({ default: false })
   isSystem: boolean;

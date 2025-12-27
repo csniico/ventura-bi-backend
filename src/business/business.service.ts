@@ -85,6 +85,7 @@ export class BusinessService {
     await this.businessRepository.save(newBusiness);
 
     user.businessId = newBusiness.id;
+    user.business = newBusiness;
     await this.userService.saveUser(user);
     const business = await this.findOne(newBusiness.id);
     if (!business) {

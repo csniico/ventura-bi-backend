@@ -4,9 +4,11 @@ import {
   Column,
   DeleteDateColumn,
   Entity,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { User } from 'src/user/entities/user.entity';
 
 /**
  * contact information ( email, phone-number, address, city, state, country)
@@ -83,6 +85,9 @@ export class Business {
 
   @Column()
   ownerId: string;
+
+  @OneToOne(() => User, (user) => user.business)
+  user: User;
 
   @Column({ default: true })
   isActive: boolean;
