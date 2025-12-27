@@ -26,10 +26,7 @@ export class StorageService {
   }
 
   async uploadImageToBucket(buffer: Buffer, key: string, mimeType: string) {
-    this.logger.log(`Key: ${key}, mimeType: ${mimeType}`);
-
     const finalKey = `${key}${uuidv4()}.${mimeType.split('/')[1]}`;
-    this.logger.log(`Uploading image to bucket: ${finalKey}`);
 
     const command = new PutObjectCommand({
       Bucket: this.bucketName,

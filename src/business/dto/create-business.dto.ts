@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsArray,
   IsNotEmpty,
-  IsEmpty,
   ValidateIf,
 } from 'class-validator';
 
@@ -59,14 +58,4 @@ export class CreateBusinessDto {
   @IsString()
   @IsOptional()
   address?: string;
-
-  @IsString()
-  @IsOptional()
-  @IsEmpty()
-  id: string;
-
-  @IsString()
-  @IsOptional()
-  @IsEmpty()
-  shortId: string;
 }

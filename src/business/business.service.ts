@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { BUSINESS_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import { Business } from 'src/business/entities/business.entity';
@@ -70,18 +65,14 @@ export class BusinessService {
       where: { ownerId },
     });
     if (existingBusiness !== null) {
-      throw new BadRequestException(
-        'cannot create business, business already exists!',
-      );
+      return await this.update(existingBusiness.id, data);
     }
     const user = await this.userService.findUserById(ownerId);
     if (!user) {
       throw new NotFoundException('user not found');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, shortId, ...rest } = data;
 
-    const newBusiness = this.businessRepository.create(rest);
+    const newBusiness = this.businessRepository.create(data);
     await this.businessRepository.save(newBusiness);
 
     user.businessId = newBusiness.id;
@@ -94,8 +85,12 @@ export class BusinessService {
     return business;
   }
 
-  async update(id: string, data: UpdateBusinessDto): Promise<Business | null> {
+  async update(id: string, data: UpdateBusinessDto): Promise<Business> {
     await this.businessRepository.update(id, data);
-    return await this.findOne(id);
+    const business = await this.findOne(id);
+    if (!business) {
+      throw new NotFoundException('business not found');
+    }
+    return business;
   }
 }

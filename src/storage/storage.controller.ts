@@ -64,7 +64,6 @@ export class StorageController {
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     try {
       this._validateUploadedFile(file);
-      console.log(file);
       const { mimetype, path: filePath } = file;
       FileValidator.validateImage(mimetype);
 
