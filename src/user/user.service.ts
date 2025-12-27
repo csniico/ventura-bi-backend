@@ -298,4 +298,15 @@ export class UserService {
       throw new InternalServerErrorException('Something went wrong');
     }
   }
+
+  async deleteUser(userId: string) {
+    if (!userId) {
+      throw new BadRequestException('userId is expected.');
+    }
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+    return await this.userRepository.delete(userId);
+  }
 }

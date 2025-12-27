@@ -1,12 +1,13 @@
 import {
-  Controller,
-  Body,
-  Patch,
   BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
   Param,
+  Patch,
   Post,
   Query,
-  Get,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateAvatarDto } from './dto/update-avatar.dto';
@@ -50,12 +51,12 @@ export class UserController {
     if (!firstName || !userId) {
       throw new BadRequestException('firstName and userId are required');
     }
-    const updatedUser = await this.userService.updateFirstnameAndLastname(
+
+    return await this.userService.updateFirstnameAndLastname(
       firstName,
       userId,
       lastName,
     );
-    return updatedUser;
   }
 
   @Post('/:userId/change-password')
@@ -86,5 +87,10 @@ export class UserController {
       throw new BadRequestException('newPassword and userId are required');
     }
     return await this.userService.resetPassword(newPassword, userId);
+  }
+
+  @Delete('/:id')
+  async deleteUser(@Param('id') userId: string) {
+    return await this.userService.deleteUser(userId);
   }
 }
