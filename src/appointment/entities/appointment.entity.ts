@@ -47,11 +47,11 @@ export class Appointment {
   @Column()
   isRecurring: boolean;
 
-  @Column({ type: 'simple-json', nullable: true })
-  recurringSchedule: {
-    until: string;
-    schedule: string;
-  };
+  @Column({ nullable: true })
+  recurringFrequency: string;
+
+  @Column({ nullable: true })
+  recurringUntil: string;
 
   @Column({ nullable: true, default: 'none' })
   googleEventId: string;

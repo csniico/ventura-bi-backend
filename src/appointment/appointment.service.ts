@@ -137,10 +137,20 @@ export class AppointmentService {
   }
 
   async create(dto: CreateAppointmentDto) {
-    this.logger.log({ dto });
+    this.logger.log('Received DTO:', JSON.stringify(dto, null, 2));
+    this.logger.log('isRecurring:', dto.isRecurring);
+    this.logger.log(
+      'recurringSchedule:',
+      dto.recurringUntil,
+      dto.recurringFrequency,
+    );
     const { userId, businessId } = dto;
     await this.authorizeRequest(userId, businessId);
     const appointment = this.appointmentRepository.create(dto);
+    this.logger.log(
+      'Created appointment:',
+      JSON.stringify(appointment, null, 2),
+    );
     return await this.appointmentRepository.save(appointment);
   }
 
@@ -200,7 +210,11 @@ export class AppointmentService {
         `Appointment with id ${appointmentId} not found`,
       );
     }
-    await this.appointmentRepository.updateAll(partials);
+
+    // Update appointment with new values
+    Object.assign(appointment, partials);
+    await this.appointmentRepository.save(appointment);
+
     const updatedAppointment = await this.appointmentRepository.findOne({
       where: { id: appointmentId },
     });

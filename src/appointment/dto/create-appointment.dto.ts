@@ -1,32 +1,18 @@
 import {
   IsBoolean,
   IsNotEmpty,
-  IsObject,
   IsOptional,
   IsString,
   IsUUID,
   ValidateIf,
-  ValidateNested,
 } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { Transform } from 'class-transformer';
 
 export enum RecurringFrequency {
   DAILY = 'daily',
   MONTHLY = 'monthly',
-  BI_MONTHLY = 'bi-monthly',
   WEEKLY = 'weekly',
-  BI_WEEKLY = 'bi-weekly',
   YEARLY = 'yearly',
-}
-
-export class Recurrence {
-  @IsString()
-  @IsNotEmpty()
-  until: string;
-
-  @IsString()
-  @IsNotEmpty()
-  frequency: RecurringFrequency;
 }
 
 export class CreateAppointmentDto {
@@ -68,10 +54,15 @@ export class CreateAppointmentDto {
   @IsNotEmpty()
   isRecurring: boolean;
 
-  @IsObject()
-  @ValidateNested()
-  @Type(() => Recurrence)
+  @IsString()
+  @IsNotEmpty()
   @ValidateIf((o: CreateAppointmentDto) => o.isRecurring)
   @IsOptional()
-  recurringSchedule?: Recurrence;
+  recurringFrequency?: RecurringFrequency;
+
+  @IsString()
+  @IsNotEmpty()
+  @ValidateIf((o: CreateAppointmentDto) => o.isRecurring)
+  @IsOptional()
+  recurringUntil?: string;
 }

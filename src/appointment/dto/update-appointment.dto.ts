@@ -4,12 +4,9 @@ import {
   IsString,
   IsBoolean,
   IsDateString,
-  IsObject,
-  ValidateNested,
   ValidateIf,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { Recurrence } from 'src/appointment/dto/create-appointment.dto';
+import { RecurringFrequency } from 'src/appointment/dto/create-appointment.dto';
 
 export class UpdateAppointmentDto {
   @IsNotEmpty()
@@ -44,10 +41,15 @@ export class UpdateAppointmentDto {
   @IsString()
   notes?: string;
 
-  @IsObject()
-  @ValidateNested()
-  @Type(() => Recurrence)
+  @IsString()
+  @IsNotEmpty()
   @ValidateIf((o: UpdateAppointmentDto) => o.isRecurring)
   @IsOptional()
-  recurringSchedule?: Recurrence;
+  recurringFrequency?: RecurringFrequency;
+
+  @IsString()
+  @IsNotEmpty()
+  @ValidateIf((o: UpdateAppointmentDto) => o.isRecurring)
+  @IsOptional()
+  recurringUntil?: string;
 }
