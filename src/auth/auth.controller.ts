@@ -65,8 +65,11 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('/signup')
-  async signup(@Body() signUpUser: SignUpDto) {
-    return await this.authService.signupWithEmailAndPassword(signUpUser);
+  async signup(
+    @Body() signUpUser: SignUpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return await this.authService.signupWithEmailAndPassword(signUpUser, res);
   }
 
   @HttpCode(HttpStatus.OK)

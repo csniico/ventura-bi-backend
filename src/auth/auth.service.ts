@@ -78,11 +78,7 @@ export class AuthService {
     return { userData: user };
   }
 
-  async login(
-    userId: string,
-    user: User & { password?: string },
-    res: Response,
-  ) {
+  login(userId: string, user: User & { password?: string }, res: Response) {
     const payload = { sub: userId };
     const token = this.jwtService.sign(payload);
 
@@ -93,22 +89,13 @@ export class AuthService {
       path: '/',
     });
 
-    this.logger.log(`is email verified: ${user.isEmailVerified}`);
-
-    if (!user.isEmailVerified) {
-      await this.mailService.sendVerificationCode({
-        email: user.email,
-        firstName: user.firstName,
-      });
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...rest } = user;
 
     return rest;
   }
 
-  async signupWithEmailAndPassword(signupUser: SignUpDto) {
+  async signupWithEmailAndPassword(signupUser: SignUpDto, res: Response) {
     try {
       const user: User =
         await this.userService.createUserWithEmailAndPassword(signupUser);
@@ -117,6 +104,7 @@ export class AuthService {
         email,
         firstName,
       });
+      this.login(user.id, user, res);
       return { user, shortToken: id };
     } catch (error) {
       const errorMessage =
