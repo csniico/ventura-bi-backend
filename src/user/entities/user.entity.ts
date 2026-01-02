@@ -47,7 +47,11 @@ export class User {
   @Column({ nullable: true })
   businessId: string;
 
-  @OneToOne(() => Business, (business) => business.user, { nullable: true })
+  @OneToOne(() => Business, (business) => business.user, {
+    nullable: true,
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'businessId' })
   business: Business;
 

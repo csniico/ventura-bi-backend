@@ -332,6 +332,6 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('User not found.');
     }
-    return await this.userRepository.delete(userId);
+    return await this.userRepository.remove(user);
   }
 }
