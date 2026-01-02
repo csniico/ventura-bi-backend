@@ -52,7 +52,6 @@ export class AuthController {
   @Post('/signin')
   login(
     @Req() req: Request & { user?: { userData: User } },
-    @Body() body: { email: string; password: string },
     @Res({ passthrough: true }) res: Response,
   ) {
     if ('user' in req && req.user) {

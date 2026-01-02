@@ -7,14 +7,17 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import jwtConfig from './config/jwt.config';
 import { MailModule } from 'src/mail/mail.module';
+import { ConfigModule } from '@nestjs/config';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
     UserModule,
     JwtModule.registerAsync(jwtConfig.asProvider()),
+    ConfigModule.forFeature(jwtConfig),
     MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, GoogleStrategy, LocalStrategy],
+  providers: [AuthService, GoogleStrategy, LocalStrategy, JwtStrategy],
 })
 export class AuthModule {}

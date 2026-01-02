@@ -13,6 +13,7 @@ import { User } from './entities/user.entity';
 import { CreateGoogleUserDto } from './dto/create-google-user.dto';
 import * as bcrypt from 'bcrypt';
 import { GetUsersDto } from './dto/get-users.dto';
+import { log } from 'console';
 
 @Injectable()
 export class UserService {
@@ -20,6 +21,27 @@ export class UserService {
     @Inject(USER_REPOSITORY)
     private userRepository: Repository<User>,
   ) {}
+
+  async validateUserId(userId: string) {
+    if (!userId) {
+      return false;
+    }
+    const uuidV4Regex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidV4Regex.test(userId)) {
+      return false;
+    }
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id'],
+    });
+    if (!user) {
+      log('user not found in validateUserId');
+      return false;
+    }
+    log('user found in validateUserId');
+    return true;
+  }
 
   async saveUser(user: User): Promise<User> {
     return await this.userRepository.save(user);
