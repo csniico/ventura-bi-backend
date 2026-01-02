@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   ImATeapotException,
+  Logger,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -16,11 +17,13 @@ import { FileValidator } from 'src/storage/validators/file-validator';
 import fs from 'fs';
 import { StorageService } from 'src/storage/storage.service';
 
-const MAX_IMAGE_SIZE_B: number = 1024 * 1024 * 5;
+const MAX_IMAGE_SIZE_B: number = 1024 * 1024 * 10;
 const TEMP_DEST = path.resolve('/tmp');
 
 @Controller('assets')
 export class StorageController {
+  private readonly logger = new Logger(StorageController.name);
+
   constructor(
     @InjectQueue('assets') private readonly assetsQueue: Queue,
     private readonly storageService: StorageService,
@@ -63,6 +66,17 @@ export class StorageController {
   )
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     try {
+      this.logger.log('Incoming file upload request');
+      this.logger.debug(
+        `File payload: ${JSON.stringify({
+          filename: file?.filename,
+          originalname: file?.originalname,
+          mimetype: file?.mimetype,
+          size: file?.size,
+          path: file?.path,
+        })}`,
+      );
+
       this._validateUploadedFile(file);
       const { mimetype, path: filePath } = file;
       FileValidator.validateImage(mimetype);

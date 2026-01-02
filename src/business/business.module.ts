@@ -15,5 +15,6 @@ import { userProviders } from 'src/user/user.providers';
     BusinessService,
     UserService,
   ],
+  exports: [BusinessService, ...businessProviders],
 })
 export class BusinessModule {}
