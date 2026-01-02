@@ -23,6 +23,7 @@ import type { Request } from 'express';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Get()
   async getAllUsers(@Query() getusersDto: GetUsersDto) {
     return await this.userService.findAllUsers(getusersDto);
@@ -41,6 +42,7 @@ export class UserController {
     return await this.userService.findUserById(userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch('/profile/:userId/')
   async updateUserProfile(
     @Param('userId') userId: string,
@@ -89,6 +91,7 @@ export class UserController {
     return await this.userService.resetPassword(newPassword, userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('/:id')
   async deleteUser(@Param('id') userId: string) {
     return await this.userService.deleteUser(userId);
