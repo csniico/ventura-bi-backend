@@ -30,19 +30,23 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('/google/login/mobile')
-  googleLoginMobile(@Body() createGoogleUser: CreateGoogleUserDto) {
-    return this.authService.validateGoogleUser(createGoogleUser);
+  async googleLoginMobile(
+    @Body() createGoogleUser: CreateGoogleUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = await this.authService.validateGoogleUser(createGoogleUser);
+    return this.authService.login(user.id, user, res);
   }
 
   @UseGuards(GoogleAuthGuard)
   @Get('/google/webhook')
-  webhookGoogleAuth(@Req() req: Request & { user?: User }) {
+  webhookGoogleAuth(
+    @Req() req: Request & { user?: User },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if ('user' in req && req.user) {
       const user = req.user;
-      return {
-        message: 'Google authentication successful',
-        user: user,
-      };
+      return this.authService.login(user.id, user, res);
     }
     return null;
   }

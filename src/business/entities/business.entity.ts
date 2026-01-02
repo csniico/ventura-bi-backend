@@ -46,7 +46,7 @@ export class Business {
   @Column({ nullable: true })
   logo: string;
 
-  @Column({ unique: true, nullable: true })
+  @Column({ nullable: true })
   email: string;
 
   @Column({ nullable: true })
