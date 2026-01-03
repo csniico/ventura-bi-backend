@@ -19,10 +19,14 @@ import { SignUpDto } from './dto/signup.dto';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
 import { ConfirmEmailDto } from 'src/auth/dto/confirm-email.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @UseGuards(GoogleAuthGuard)
   @Get('/google/login/web')
@@ -46,9 +50,16 @@ export class AuthController {
   ) {
     if ('user' in req && req.user) {
       const user = req.user;
-      return this.authService.login(user.id, user, res);
+      const signedUser = this.authService.login(user.id, user, res);
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_REDIRECT_URL') ||
+        'http://localhost:4200';
+      return res.redirect(`${frontendUrl}?user=${JSON.stringify(signedUser)}`);
     }
-    return null;
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_REDIRECT_URL') ||
+      'http://localhost:4200';
+    return res.redirect(`${frontendUrl}/login?error=auth_failed`);
   }
 
   @HttpCode(HttpStatus.OK)
