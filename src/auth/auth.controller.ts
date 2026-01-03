@@ -51,15 +51,17 @@ export class AuthController {
     if ('user' in req && req.user) {
       const user = req.user;
       const signedUser = this.authService.login(user.id, user, res);
-      const frontendUrl =
+      const frontendRedirectUrl =
         this.configService.get<string>('FRONTEND_REDIRECT_URL') ||
         'http://localhost:4200';
-      return res.redirect(`${frontendUrl}?user=${JSON.stringify(signedUser)}`);
+      return res.redirect(
+        `${frontendRedirectUrl}?user=${encodeURIComponent(JSON.stringify(signedUser))}`,
+      );
     }
-    const frontendUrl =
+    const frontendRedirectUrl =
       this.configService.get<string>('FRONTEND_REDIRECT_URL') ||
       'http://localhost:4200';
-    return res.redirect(`${frontendUrl}/login?error=auth_failed`);
+    return res.redirect(`${frontendRedirectUrl}/login?error=auth_failed`);
   }
 
   @HttpCode(HttpStatus.OK)
