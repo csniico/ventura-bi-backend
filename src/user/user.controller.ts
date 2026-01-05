@@ -7,7 +7,6 @@ import {
   Param,
   Patch,
   Post,
-  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,19 +14,12 @@ import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { GetUsersDto } from './dto/get-users.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 import type { Request } from 'express';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
-  @UseGuards(JwtAuthGuard)
-  @Get()
-  async getAllUsers(@Query() getusersDto: GetUsersDto) {
-    return await this.userService.findAllUsers(getusersDto);
-  }
 
   @UseGuards(JwtAuthGuard)
   @Get('/:userId')

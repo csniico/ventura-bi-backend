@@ -8,6 +8,8 @@ import {
   HttpStatus,
   Res,
   Body,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
@@ -15,18 +17,23 @@ import type { Response } from 'express';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { CreateGoogleUserDto } from 'src/user/dto/create-google-user.dto';
 import { User } from 'src/user/entities/user.entity';
-import { SignUpDto } from './dto/signup.dto';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
 import { ConfirmEmailDto } from 'src/auth/dto/confirm-email.dto';
 import { ConfigService } from '@nestjs/config';
+import { CreateUserDto } from 'src/user/dto/create-user.dto';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+  private frontendRedirectUrl: string | null;
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.frontendRedirectUrl =
+      this.configService.get<string>('FRONTEND_REDIRECT_URL') || null;
+  }
 
   @UseGuards(GoogleAuthGuard)
   @Get('/google/login/web')
@@ -39,7 +46,8 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateGoogleUser(createGoogleUser);
-    return this.authService.login(user.id, user, res);
+    this.authService.login({ userId: user.id, res });
+    return user;
   }
 
   @UseGuards(GoogleAuthGuard)
@@ -48,45 +56,50 @@ export class AuthController {
     @Req() req: Request & { user?: User },
     @Res({ passthrough: true }) res: Response,
   ) {
+    if (!this.frontendRedirectUrl) {
+      this.logger.warn('FRONTEND_REDIRECT_URL is not set.');
+      throw new InternalServerErrorException('Server configuration error');
+    }
+
     if ('user' in req && req.user) {
       const user = req.user;
-      const signedUser = this.authService.login(user.id, user, res);
-      const frontendRedirectUrl =
-        this.configService.get<string>('FRONTEND_REDIRECT_URL') ||
-        'http://localhost:4200';
+      this.authService.login({ userId: user.id, res });
       return res.redirect(
-        `${frontendRedirectUrl}?user=${encodeURIComponent(JSON.stringify(signedUser))}`,
+        `${this.frontendRedirectUrl}?id=${encodeURIComponent(JSON.stringify(user.id))}`,
       );
     }
-    const frontendRedirectUrl =
-      this.configService.get<string>('FRONTEND_REDIRECT_URL') ||
-      'http://localhost:4200';
-    return res.redirect(`${frontendRedirectUrl}/login?error=auth_failed`);
+
+    return res.redirect(`${this.frontendRedirectUrl}/login?error=auth_failed`);
   }
 
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
   @Post('/signin')
   login(
-    @Req() req: Request & { user?: { userData: User } },
+    @Req() req: Request & { user?: User },
     @Res({ passthrough: true }) res: Response,
   ) {
     if ('user' in req && req.user) {
-      return this.authService.login(
-        req.user.userData.id,
-        req.user.userData,
-        res,
-      );
+      const user = req.user;
+
+      this.authService.login({ userId: user.id, res });
+      return user;
     }
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('/signup')
   async signup(
-    @Body() signUpUser: SignUpDto,
+    @Body() dto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return await this.authService.signupWithEmailAndPassword(signUpUser, res);
+    const user = await this.authService.signup({
+      dto: dto,
+      isGoogleUser: false,
+    });
+
+    this.authService.login({ userId: user.id, res });
+    return user;
   }
 
   @HttpCode(HttpStatus.OK)

@@ -13,10 +13,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(email: string, password: string) {
-    this.logger.log(
-      `Validating user with email: ${email}, password is ${password}`,
-    );
-    return this.authService.validateUserWithEmailAndPassword({
+    return this.authService.signInWithEmailPassword({
       email,
       password,
     });

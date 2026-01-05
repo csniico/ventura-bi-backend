@@ -4,17 +4,19 @@ import { accessTokenCookieExtractor } from '../utils/cookie-extractor';
 import {
   Inject,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import jwtConfig from '../config/jwt.config';
 import type { ConfigType } from '@nestjs/config';
-import { UserService } from 'src/user/user.service';
+import { AuthService } from '../auth.service';
 
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  private readonly logger = new Logger('JwtStrategy');
   constructor(
     @Inject(jwtConfig.KEY)
     private jwtConfiguration: ConfigType<typeof jwtConfig>,
-    private readonly userService: UserService,
+    private readonly authService: AuthService,
   ) {
     if (!jwtConfiguration.secret) {
       throw new InternalServerErrorException(
@@ -29,9 +31,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: { sub: string }) {
-    const isValidUser = await this.userService.validateUserId(payload.sub);
-    if (!isValidUser) {
-      throw new UnauthorizedException('User validation failed.');
+    const isAuthorized = await this.authService.verifyJwtPayload({
+      userId: payload.sub,
+    });
+    if (!isAuthorized) {
+      this.logger.warn(`Jwt validation. User is unauthorized`);
+      throw new UnauthorizedException();
     }
     return { userId: payload.sub };
   }

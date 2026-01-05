@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -6,115 +7,82 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
-import { CreateGoogleUserDto } from 'src/user/dto/create-google-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import type { Response } from 'express';
-import { User } from 'src/user/entities/user.entity';
-import { SignUpDto } from './dto/signup.dto';
 import { MailService } from 'src/mail/mail.service';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
-import { QueryFailedError } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { CreateUserDto } from 'src/user/dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
   private logger = new Logger(AuthService.name);
+  private csrfDomain: string | null;
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
-  ) {}
-
-  async validateGoogleUser(googleUser: CreateGoogleUserDto) {
-    const { email, googleId } = googleUser;
-
-    const existingUser = await this.userService.findUserByGoogleId(
-      googleId || '',
-    );
-    if (existingUser) return existingUser;
-
-    const nonGoogleUser = await this.userService.findGoogleUserByEmail(email);
-    if (nonGoogleUser) {
-      throw new UnauthorizedException('Login with email and password');
-    }
-
-    return await this.userService.createGoogleUser(googleUser, true);
+    private readonly configService: ConfigService,
+  ) {
+    this.csrfDomain = configService.get<string>('CSRF_COOKIE_DOMAIN') || null;
   }
 
-  async validateUserWithEmailAndPassword(loginDto: LoginDto) {
+  async verifyJwtPayload({ userId }: { userId: string }) {
+    return await this.userService.verifyUserId(userId);
+  }
+
+  async validateGoogleUser(dto: CreateUserDto) {
+    return await this.signup({ dto, isGoogleUser: true });
+  }
+
+  async signInWithEmailPassword(loginDto: LoginDto) {
     const { email, password } = loginDto;
-    this.logger.log(
-      `Validating user with email: ${email} and password: ${password}`,
-    );
-    const user = await this.userService.findUserByEmail(email, true);
-    if (!user) {
-      this.logger.log(`user not found with email: ${email}, user: ${user}`);
-      throw new NotFoundException('User not found');
-    }
-    // if the user exists but the password is null,
-    // the user is google-oauth2.0 authenticated
-    if (!user.password && user.googleId) {
-      // let them know they are unauthorized
-      // they should use their google-accounts to log in
-      this.logger.log(
-        `user with email: ${email} has googleId: ${user.googleId}`,
-      );
-      throw new UnauthorizedException(
-        'Invalid credentials. Login with Google.',
-      );
-    }
-    const isPasswordMatch = await this.userService.comparePassword(
-      password,
-      user.password,
-    );
-    if (!isPasswordMatch) {
-      this.logger.log(`password mismatch for user with email: ${email}`);
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    this.logger.log(`is email verified: ${user.isEmailVerified}`);
-
-    this.logger.log(`user validated with email: ${email}`);
-    return { userData: user };
+    return await this.userService.handleUserSignIn({ email, password });
   }
 
-  login(userId: string, user: User & { password?: string }, res: Response) {
+  login({ userId, res }: { userId: string; res: Response }) {
     const payload = { sub: userId };
     const token = this.jwtService.sign(payload);
 
-    res.cookie('access_token', token, {
+    if (!this.csrfDomain) {
+      this.logger.warn('CSRF_COOKIE_DOMAIN is not set.');
+      throw new InternalServerErrorException('Server configuration error');
+    }
+
+    return res.cookie('access_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      secure: true,
+      sameSite: 'lax',
       path: '/',
+      domain: this.csrfDomain,
+      maxAge: 1000 * 60 * 60 * 24,
     });
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...rest } = user;
-
-    return rest;
   }
 
-  async signupWithEmailAndPassword(signupUser: SignUpDto, res: Response) {
-    try {
-      const user: User =
-        await this.userService.createUserWithEmailAndPassword(signupUser);
-      const { email, firstName } = user;
-      const { id } = await this.mailService.sendVerificationCode({
-        email,
-        firstName,
-      });
-      this.login(user.id, user, res);
-      return { user, shortToken: id };
-    } catch (error) {
-      const errorMessage =
-        error instanceof QueryFailedError ? error.message : String(error);
-      throw new InternalServerErrorException(errorMessage);
+  async signup({
+    dto,
+    isGoogleUser = false,
+  }: {
+    dto: CreateUserDto;
+    isGoogleUser: boolean;
+  }) {
+    const { status, user } = await this.userService.createUser({
+      dto,
+      isGoogleUser,
+    });
+
+    if (status === 'NEW_USER') {
+      // send sign up verification code
+    } else if (status === 'EXISTSING_USER') {
+      // send login attempt email verification
     }
+    return user;
   }
 
   async confirmEmailAndSendVerificationCode(email: string) {
-    const user = await this.userService.getUserByEmail(email);
+    const user = await this.userService.findUserByEmail(email);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -123,7 +91,7 @@ export class AuthService {
   }
 
   async verifyEmailWithCode(dto: VerifyCodeDto) {
-    const user = await this.userService.getUserByEmail(dto.email);
+    const user = await this.userService.findUserByEmail(dto.email);
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -144,12 +112,12 @@ export class AuthService {
   async resendCode(dto: ResendCodeDTO) {
     const mail = await this.mailService.getMailById(dto.id);
     if (!mail) {
-      throw new NotFoundException('Email not found');
+      throw new BadRequestException();
     }
     const { to: email } = mail;
     const user = await this.userService.findUserByEmail(email);
     if (!user) {
-      return new NotFoundException('user does not exist');
+      throw new BadRequestException();
     }
     const { firstName } = user;
     return await this.mailService.sendVerificationCode({ email, firstName });

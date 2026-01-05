@@ -23,8 +23,14 @@ export class SignUpDto {
   @IsEmail()
   email: string;
 
-  @IsStrongPassword()
-  @Length(6, 20)
+  @IsStrongPassword({
+    minLength: 12,
+    minUppercase: 1,
+    minNumbers: 1,
+    minSymbols: 1,
+    minLowercase: 1,
+  })
+  @Length(12, 128)
   password: string;
 
   @IsString()
