@@ -176,8 +176,10 @@ export class UserService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials.');
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: userPassword, ...userWithoutPassword } = user;
 
-    return user;
+    return userWithoutPassword;
   }
 
   async verifyPassword({ password, hash }: { password: string; hash: string }) {
