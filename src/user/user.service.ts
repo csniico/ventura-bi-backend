@@ -204,12 +204,36 @@ export class UserService {
     const user = await this.userRepository.findOne({
       where: { email: dto.email },
     });
+
     if (!user) {
-      // debug log
       this.logger.debug(`Creating new user with email: ${dto.email}`);
       return await this.createNewUser({ dto, isGoogleUser });
     }
-    // debug log
+
+    if (isGoogleUser) {
+      // User exists, trying to sign in with Google
+      if (user.googleId && user.googleId !== dto.googleId) {
+        // Different Google account - reject
+        this.logger.warn(`Google ID mismatch for email: ${dto.email}`);
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      if (!user.googleId && dto.googleId) {
+        // Link Google account to existing user
+        this.logger.debug(
+          `Linking Google account to existing user: ${dto.email}`,
+        );
+        user.googleId = dto.googleId;
+        user.isEmailVerified = true; // Google emails are verified
+        await this.userRepository.save(user);
+      }
+
+      return {
+        status: 'EXISTING_GOOGLE_USER',
+        user,
+      };
+    }
+
     this.logger.debug(`User with email: ${dto.email} already exists.`);
     return this.validateUserSignup({ user, isGoogleUser });
   }

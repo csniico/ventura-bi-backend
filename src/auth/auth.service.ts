@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
   UnauthorizedException,
@@ -46,18 +45,16 @@ export class AuthService {
     const payload = { sub: userId };
     const token = this.jwtService.sign(payload);
 
-    if (!this.csrfDomain) {
-      this.logger.warn('CSRF_COOKIE_DOMAIN is not set.');
-      throw new InternalServerErrorException('Server configuration error');
-    }
+    // if (!this.csrfDomain) {
+    //   this.logger.warn('CSRF_COOKIE_DOMAIN is not set.');
+    //   throw new InternalServerErrorException('Server configuration error');
+    // }
 
     return res.cookie('access_token', token, {
       httpOnly: true,
       secure: true,
-      sameSite: 'lax',
+      sameSite: 'none',
       path: '/',
-      domain: this.csrfDomain,
-      maxAge: 1000 * 60 * 60 * 24,
     });
   }
 
@@ -93,9 +90,7 @@ export class AuthService {
       });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return await this.userService.findUserById(user.id);
   }
 
   async confirmEmailAndSendVerificationCode(email: string) {

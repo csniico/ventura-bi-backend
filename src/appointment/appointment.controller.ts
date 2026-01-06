@@ -9,13 +9,16 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
 import { CreateAppointmentDto } from 'src/appointment/dto/create-appointment.dto';
 import { UpdateGoogleEvent } from 'src/appointment/dto/update-google-event.dto';
 import { UpdateAppointmentDto } from 'src/appointment/dto/update-appointment.dto';
 import { DeleteAppointmentDto } from 'src/appointment/dto/delete-appointment.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('appointments')
 export class AppointmentController {
   private readonly logger = new Logger('AppointmentController');
