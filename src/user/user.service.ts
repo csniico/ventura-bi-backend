@@ -14,7 +14,7 @@ import { User } from './entities/user.entity';
 import * as bcrypt from 'bcrypt';
 
 type CreateUserResult = {
-  status: 'NEW_USER' | 'EXISTSING_USER' | 'EXISTING_GOOGLE_USER';
+  status: 'NEW_USER' | 'EXISTING_USER' | 'EXISTING_GOOGLE_USER';
   user: User;
 };
 
@@ -58,11 +58,19 @@ export class UserService {
     isGoogleUser: boolean;
   }): CreateUserResult {
     if (!isGoogleUser) {
+      // debug log
+      this.logger.debug(
+        `User with email: ${user.email} is signing up as a non-Google user.`,
+      );
       return {
-        status: 'EXISTSING_USER',
+        status: 'EXISTING_USER',
         user,
       };
     }
+    // debug log
+    this.logger.debug(
+      `User with email: ${user.email} is signing up as an existing Google user.`,
+    );
     return {
       status: 'EXISTING_GOOGLE_USER',
       user,
@@ -197,8 +205,12 @@ export class UserService {
       where: { email: dto.email },
     });
     if (!user) {
+      // debug log
+      this.logger.debug(`Creating new user with email: ${dto.email}`);
       return await this.createNewUser({ dto, isGoogleUser });
     }
+    // debug log
+    this.logger.debug(`User with email: ${dto.email} already exists.`);
     return this.validateUserSignup({ user, isGoogleUser });
   }
 

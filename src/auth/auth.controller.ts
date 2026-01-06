@@ -114,6 +114,9 @@ export class AuthController {
     return await this.authService.resendCode(dto);
   }
 
+  /**
+   * confirm email for password reset
+   */
   @HttpCode(HttpStatus.OK)
   @Post('/confirm-email')
   confirmEmailAndSendVerificationCode(@Body() dto: ConfirmEmailDto) {

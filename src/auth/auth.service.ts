@@ -73,12 +73,29 @@ export class AuthService {
       isGoogleUser,
     });
 
+    // debug log
+    this.logger.debug(
+      `Signup process for email: ${dto.email} resulted in status: ${status}`,
+    );
     if (status === 'NEW_USER') {
       // send sign up verification code
-    } else if (status === 'EXISTSING_USER') {
+      await this.mailService.sendVerificationCode({
+        email: dto.email,
+        firstName: dto.firstName,
+        status: 'NEW',
+      });
+    } else if (status === 'EXISTING_USER') {
       // send login attempt email verification
+      await this.mailService.sendVerificationCode({
+        email: dto.email,
+        firstName: dto.firstName,
+        status: 'EXISTING',
+      });
     }
-    return user;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
   async confirmEmailAndSendVerificationCode(email: string) {
@@ -87,7 +104,11 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
     const { firstName } = user;
-    return await this.mailService.sendVerificationCode({ email, firstName });
+    return await this.mailService.sendVerificationCode({
+      email,
+      firstName,
+      status: 'NEW',
+    });
   }
 
   async verifyEmailWithCode(dto: VerifyCodeDto) {
@@ -120,7 +141,11 @@ export class AuthService {
       throw new BadRequestException();
     }
     const { firstName } = user;
-    return await this.mailService.sendVerificationCode({ email, firstName });
+    return await this.mailService.sendVerificationCode({
+      email,
+      firstName,
+      status: 'EXISTING',
+    });
   }
 
   async forgotPassword(newPassword: string, userId: string) {

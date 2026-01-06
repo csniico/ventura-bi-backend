@@ -22,6 +22,14 @@ import {
   WELCOME_EMAIL_SUBJECT,
   WelcomeEmailTemplate,
 } from 'src/mail/templates/welcome-template';
+import {
+  ALREADY_REGISTERED_SUBJECT,
+  ExistingUserSignupTemplate,
+} from './templates/existing-user-signup-template';
+import {
+  ControllerQueueJobPayload,
+  ServiceQueueJobPayload,
+} from './types/mail';
 
 interface MailResponseInfo {
   accepted: string[];
@@ -60,35 +68,15 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
     this.logger.log(`Processing job ${job.id} of type ${job.name}`);
     try {
       switch (job.name) {
-        case 'send-email': {
-          const { to, subject, htmlBody, mailId } = job.data as {
-            to: string[];
-            subject: string;
-            htmlBody: string;
-            mailId: string;
-          };
-          return await this.sendMail(mailId, {
-            recipients: to,
-            htmlBody: htmlBody,
-            subject: subject,
-          });
-        }
+        case 'send-email':
+          return await this.handleControllerSendEmail(
+            job.data as ControllerQueueJobPayload,
+          );
         case 'verification': {
-          const { email, firstName, code, mailId } = job.data as {
-            mailId: string;
-            email?: string;
-            firstName?: string;
-            code?: string;
-          };
-          if (!email || !firstName || !code || !mailId) {
-            throw new Error('Invalid queue data');
-          }
-          return await this.sendVerificationEmail({
-            mailId,
-            email,
-            firstName,
-            code,
-          });
+          // handle user login(existing user attempt signup) / signup email verification
+          return await this.handleServiceEmailVerification(
+            job.data as ServiceQueueJobPayload,
+          );
         }
         case 'welcome': {
           const { email, mailId, firstName } = job.data as {
@@ -132,6 +120,45 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
     this.logger.log(`FAILED job ${job.id} of type ${job.name}`);
   }
 
+  private async handleControllerSendEmail(payload: ControllerQueueJobPayload) {
+    const { htmlBody, mailId, subject, to } = payload;
+    if (!mailId || !to || to.length === 0 || !htmlBody || !subject) {
+      this.logger.error('Invalid controller send email payload', payload);
+      throw new InternalServerErrorException('An unexpected error occurred.');
+    }
+
+    return await this.sendMail(mailId, {
+      recipients: to,
+      htmlBody: htmlBody,
+      subject: subject,
+    });
+  }
+
+  private async handleServiceEmailVerification(
+    payload: ServiceQueueJobPayload,
+  ) {
+    const { code, email, firstName, mailId, status } = payload;
+    if (!status || (status === 'NEW' && !code)) {
+      throw new InternalServerErrorException('Verification code is required');
+    }
+    if (!email || !mailId || !firstName) {
+      this.logger.error('Invalid email verification payload', payload);
+      throw new InternalServerErrorException('An unexpected error occurred.');
+    }
+    if (status === 'NEW' && code) {
+      return await this.sendVerificationEmail({
+        mailId,
+        email,
+        firstName,
+        code,
+      });
+    } else if (status === 'EXISTING') {
+      return await this.sendExistingUserSignupEmail(payload);
+    }
+    this.logger.error('Invalid email verification payload', payload);
+    throw new InternalServerErrorException('An unexpected error occurred.');
+  }
+
   private async sendVerificationEmail({
     mailId,
     email,
@@ -148,9 +175,36 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
       code,
       10,
     );
+
+    if (!htmlBody) {
+      this.logger.warn(
+        `Failed to generate verification email template. FirstName: ${firstName}, code: ${code}`,
+      );
+      throw new InternalServerErrorException('An unexpected error occurred.');
+    }
+
     return await this.sendMail(mailId, {
       recipients: [email],
       subject: VERIFICATION_EMAIL_SUBJECT,
+      htmlBody: htmlBody,
+      cc: [],
+    });
+  }
+
+  private async sendExistingUserSignupEmail(payload: ServiceQueueJobPayload) {
+    const { email, firstName, mailId } = payload;
+    const htmlBody = this.generateExistingUserSignUpTemplate(firstName!);
+
+    if (!htmlBody) {
+      this.logger.warn(
+        `Failed to generate existing user signup email template.`,
+      );
+      throw new InternalServerErrorException('An unexpected error occurred.');
+    }
+
+    return await this.sendMail(mailId!, {
+      recipients: [email!],
+      subject: ALREADY_REGISTERED_SUBJECT,
       htmlBody: htmlBody,
       cc: [],
     });
@@ -183,6 +237,12 @@ export class MailProcessor extends WorkerHost implements OnModuleInit {
       verificationCode,
       expirationMinutes,
     );
+  }
+
+  private generateExistingUserSignUpTemplate(firstName: string) {
+    const loginUrl = this.configService.get<string>('APP_LOGIN_URL');
+    const resetUrl = this.configService.get<string>('APP_RESET_PASSWORD_URL');
+    return ExistingUserSignupTemplate(firstName, loginUrl, resetUrl);
   }
 
   private generateWelcomeEmailTemplate(firstName: string) {

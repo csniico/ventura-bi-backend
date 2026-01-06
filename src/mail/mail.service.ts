@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MAILER_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Mail, MailStatus } from 'src/mail/entities/mail.entity';
@@ -9,6 +9,7 @@ import { VERIFICATION_EMAIL_SUBJECT } from 'src/mail/templates/email-verificatio
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { WELCOME_EMAIL_SUBJECT } from 'src/mail/templates/welcome-template';
 import { SendMailDto } from 'src/mail/dto/send-mail.dto';
+import { ServiceQueueJobPayload } from './types/mail';
 
 @Injectable()
 export class MailService {
@@ -74,23 +75,29 @@ export class MailService {
   async sendVerificationCode({
     email,
     firstName,
+    status,
   }: {
     email: string;
     firstName: string;
+    status: 'NEW' | 'EXISTING';
   }) {
     const verificationCode = this.generateEmailVerificationCode();
+
     const mail = this.mailRepository.create({
       to: email,
       subject: VERIFICATION_EMAIL_SUBJECT,
       verificationCode: verificationCode,
     });
     await this.mailRepository.save(mail);
+
     await this.mailQueue.add('verification', {
       mailId: mail.shortId, //shortId of the mail entity
       email,
       firstName,
       code: verificationCode,
-    });
+      status: status,
+    } as ServiceQueueJobPayload);
+
     return {
       message: 'Verification code sent',
       id: mail.shortId,
@@ -133,12 +140,16 @@ export class MailService {
 
   private generateEmailVerificationCode() {
     try {
-      return nanoid(6);
+      const nanoid = customAlphabet(
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+        6,
+      );
+      return nanoid();
     } catch (error: unknown) {
-      console.error({
-        message: 'Error generating email verification code',
+      this.logger.error(
+        'Error generating email verification code with nanoid',
         error,
-      });
+      );
 
       return Math.floor(100000 + Math.random() * 900000).toString();
     }
