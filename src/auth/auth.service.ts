@@ -76,21 +76,32 @@ export class AuthService {
     );
     if (status === 'NEW_USER') {
       // send sign up verification code
-      await this.mailService.sendVerificationCode({
+      const result = await this.mailService.sendVerificationCode({
         email: dto.email,
         firstName: dto.firstName,
         status: 'NEW',
       });
+      return {
+        user: await this.userService.findUserById(user.id),
+        shortToken: result.id,
+      };
     } else if (status === 'EXISTING_USER') {
       // send login attempt email verification
-      await this.mailService.sendVerificationCode({
+      const result = await this.mailService.sendVerificationCode({
         email: dto.email,
         firstName: dto.firstName,
         status: 'EXISTING',
       });
+      return {
+        user: await this.userService.findUserById(user.id),
+        shortToken: result.id,
+      };
     }
 
-    return await this.userService.findUserById(user.id);
+    return {
+      user: await this.userService.findUserById(user.id),
+      shortToken: null,
+    };
   }
 
   async confirmEmailAndSendVerificationCode(email: string) {

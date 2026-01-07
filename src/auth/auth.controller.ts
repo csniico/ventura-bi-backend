@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { CreateGoogleUserDto } from 'src/user/dto/create-google-user.dto';
 import { User } from 'src/user/entities/user.entity';
@@ -45,7 +45,8 @@ export class AuthController {
     @Body() createGoogleUser: CreateGoogleUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.authService.validateGoogleUser(createGoogleUser);
+    const { user } =
+      await this.authService.validateGoogleUser(createGoogleUser);
     this.authService.login({ userId: user.id, res });
     return user;
   }
@@ -65,7 +66,7 @@ export class AuthController {
       const user = req.user;
       this.authService.login({ userId: user.id, res });
       return res.redirect(
-        `${this.frontendRedirectUrl}?id=${encodeURIComponent(JSON.stringify(user.id))}`,
+        `${this.frontendRedirectUrl}?id=${encodeURIComponent(String(user.id))}`,
       );
     }
 
@@ -93,12 +94,18 @@ export class AuthController {
     @Body() dto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.authService.signup({
+    const { user, shortToken } = await this.authService.signup({
       dto: dto,
       isGoogleUser: false,
     });
 
     this.authService.login({ userId: user.id, res });
+    if (shortToken) {
+      return {
+        user,
+        shortToken,
+      };
+    }
     return user;
   }
 
