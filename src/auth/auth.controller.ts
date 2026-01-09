@@ -24,7 +24,9 @@ import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { RefreshAuthGuard } from './guards/refresh-auth/refresh-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 
+@SkipThrottle()
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -75,6 +77,9 @@ export class AuthController {
     return res.redirect(`${this.frontendRedirectUrl}/login?error=auth_failed`);
   }
 
+  @Throttle({
+    login: { limit: 15, ttl: 60 * 60 * 1000, blockDuration: 15 * 60 * 1000 },
+  })
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
   @Post('/signin')
