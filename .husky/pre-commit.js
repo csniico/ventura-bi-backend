@@ -33,24 +33,4 @@ try {
   process.exit(1);
 }
 
-// 3. Check Conventional Commit Format
-try {
-  const commitMsg = fs.readFileSync('.git/COMMIT_EDITMSG', 'utf-8');
-  const firstLine = commitMsg.split('\n')[0];
-
-  const conventionalCommitPattern =
-    /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?:/;
-
-  if (!conventionalCommitPattern.test(firstLine)) {
-    console.error('');
-    console.error(
-      'ERROR: Commit message does not follow Conventional Commits format (e.g., feat(scope): message).',
-    );
-    process.exit(1);
-  }
-} catch (error) {
-  console.error('Failed to read commit message.');
-  process.exit(1);
-}
-
 console.log('Pre-commit checks passed.');

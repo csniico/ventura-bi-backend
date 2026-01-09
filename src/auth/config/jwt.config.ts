@@ -1,7 +1,7 @@
 import { ConfigService, registerAs } from '@nestjs/config';
 import { JwtModuleOptions } from '@nestjs/jwt';
 
-type StringValue =
+export type StringValue =
   | `${number}`
   | `${number}${'d' | 'h' | 'm' | 's' | 'ms' | 'y' | 'w'}`
   | `${number} ${'d' | 'h' | 'm' | 's' | 'ms' | 'y' | 'w'}`;

@@ -22,6 +22,8 @@ import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
 import { ConfirmEmailDto } from 'src/auth/dto/confirm-email.dto';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
+import { RefreshAuthGuard } from './guards/refresh-auth/refresh-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -47,14 +49,14 @@ export class AuthController {
   ) {
     const { user } =
       await this.authService.validateGoogleUser(createGoogleUser);
-    this.authService.login({ userId: user.id, res });
+    await this.authService.login({ userId: user.id, res });
     return user;
   }
 
   @UseGuards(GoogleAuthGuard)
   @Get('/google/webhook')
-  webhookGoogleAuth(
-    @Req() req: Request & { user?: User },
+  async webhookGoogleAuth(
+    @Req() req: Request & { user?: any },
     @Res({ passthrough: true }) res: Response,
   ) {
     if (!this.frontendRedirectUrl) {
@@ -63,8 +65,8 @@ export class AuthController {
     }
 
     if ('user' in req && req.user) {
-      const user = req.user;
-      this.authService.login({ userId: user.id, res });
+      const user = (req.user as { user: User }).user;
+      await this.authService.login({ userId: user.id, res });
       return res.redirect(
         `${this.frontendRedirectUrl}?id=${encodeURIComponent(String(user.id))}`,
       );
@@ -76,14 +78,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
   @Post('/signin')
-  login(
+  async login(
     @Req() req: Request & { user?: User },
     @Res({ passthrough: true }) res: Response,
   ) {
     if ('user' in req && req.user) {
       const user = req.user;
 
-      this.authService.login({ userId: user.id, res });
+      await this.authService.login({ userId: user.id, res });
       return user;
     }
   }
@@ -99,7 +101,7 @@ export class AuthController {
       isGoogleUser: false,
     });
 
-    this.authService.login({ userId: user.id, res });
+    await this.authService.login({ userId: user.id, res });
     if (shortToken) {
       return {
         user,
@@ -136,7 +138,43 @@ export class AuthController {
     return await this.authService.forgotPassword(body.newPassword, body.userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('/logout')
-  logout() {}
+  async logout(
+    @Req() req: Request & { user?: { userId: string } },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if ('user' in req && req.user) {
+      const id = req.user.userId;
+      await this.authService.signout(id);
+    }
+
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+  }
+
+  @UseGuards(RefreshAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('/refresh-token')
+  async refreshToken(
+    @Req() req: Request & { user?: { userId: string } },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    if ('user' in req && req.user) {
+      const id = req.user.userId;
+
+      await this.authService.login({ userId: id, res });
+    }
+  }
 }
