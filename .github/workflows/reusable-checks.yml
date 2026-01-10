@@ -12,11 +12,11 @@ jobs:
         id: check_branch
         run: |
           BRANCH_NAME=${{ github.head_ref || github.ref_name }}
-          if [[ $BRANCH_NAME =~ ^(feature\/|fix\/|hotfix\/|main$|develop$|dev$) ]]; then
+          if [[ $BRANCH_NAME =~ ^(feature\/|fix\/|hotfix\/|refactor\/|main$|develop$|dev$) ]]; then
               echo "Branch name is valid."
               echo "is_valid=true" >> $GITHUB_OUTPUT
           else
-              echo "Branch name is invalid. Must start with feature/, fix/, or hotfix/"
+              echo "Branch name is invalid. Must start with feature/, fix/, hotfix/, or refactor/, or be main, develop, or dev."
               echo "is_valid=false" >> $GITHUB_OUTPUT
               exit 1
           fi
@@ -37,7 +37,7 @@ jobs:
           configFile: .commitlintrc.js
   lint:
     runs-on: ubuntu-latest
-    needs: [ validate_branch, validate_commit_messages ]
+    needs: [validate_branch, validate_commit_messages]
     steps:
       - uses: actions/checkout@v4
       - name: Setup pnpm
