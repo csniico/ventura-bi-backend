@@ -41,6 +41,9 @@ export class User {
   @Column({ nullable: true, select: false })
   password: string;
 
+  @Column({ nullable: true, select: false, type: 'varchar' })
+  hashedRefreshToken: string | null;
+
   @Column({ nullable: true })
   avatarUrl: string;
 

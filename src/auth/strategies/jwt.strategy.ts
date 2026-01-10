@@ -30,6 +30,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
+  /**
+   * if the passport strategy finds the access token in the cookies and the access
+   * token is not expired, it will call the validate function and pass the payload to
+   * the function
+   * @param payload the results of decrypting the access jwt token {sub: 'userId'}
+   * @returns user id
+   */
   async validate(payload: { sub: string }) {
     const isAuthorized = await this.authService.verifyJwtPayload({
       userId: payload.sub,

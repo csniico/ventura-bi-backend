@@ -11,6 +11,7 @@ import { MailModule } from 'src/mail/mail.module';
 import { BullModule } from '@nestjs/bullmq';
 import { StorageModule } from './storage/storage.module';
 import { CustomerModule } from './customer/customer.module';
+import { ResourceModule } from './resource/resource.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { CustomerModule } from './customer/customer.module';
     MailModule,
     StorageModule,
     CustomerModule,
+    ResourceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

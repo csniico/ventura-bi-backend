@@ -1,10 +1,19 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { BUSINESS_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import { Business } from 'src/business/entities/business.entity';
 import { CreateBusinessDto } from 'src/business/dto/create-business.dto';
 import { UpdateBusinessDto } from 'src/business/dto/update-business.dto';
 import { UserService } from 'src/user/user.service';
+import {
+  IFindBusinessByIdParams,
+  IFindBusinessByOwnerParams,
+} from './interfaces/business.interfaces';
 
 @Injectable()
 export class BusinessService {
@@ -31,9 +40,9 @@ export class BusinessService {
     });
   }
 
-  async findOne(businessId: string) {
+  async findOne(params: IFindBusinessByIdParams) {
     const business = await this.businessRepository.findOne({
-      where: { id: businessId },
+      where: { id: params.businessId },
       select: [
         'id',
         'shortId',
@@ -59,6 +68,36 @@ export class BusinessService {
     return business;
   }
 
+  async findByOwnerId(
+    params: IFindBusinessByOwnerParams,
+  ): Promise<Business | null> {
+    const business = await this.businessRepository.findOne({
+      where: { ownerId: params.ownerId },
+      select: [
+        'id',
+        'shortId',
+        'name',
+        'email',
+        'phone',
+        'address',
+        'city',
+        'state',
+        'country',
+        'ownerId',
+        'logo',
+        'categories',
+        'tagLine',
+        'description',
+      ],
+    });
+    if (!business) {
+      throw new UnauthorizedException(
+        'You do not have permission to access this business',
+      );
+    }
+    return business;
+  }
+
   async create(data: CreateBusinessDto): Promise<Business> {
     const { ownerId } = data;
     const existingBusiness = await this.businessRepository.findOne({
@@ -78,7 +117,7 @@ export class BusinessService {
     user.businessId = newBusiness.id;
     user.business = newBusiness;
     await this.userService.saveUser(user);
-    const business = await this.findOne(newBusiness.id);
+    const business = await this.findOne({ businessId: newBusiness.id });
     if (!business) {
       throw new NotFoundException('business not found');
     }
@@ -87,7 +126,7 @@ export class BusinessService {
 
   async update(id: string, data: UpdateBusinessDto): Promise<Business> {
     await this.businessRepository.update(id, data);
-    const business = await this.findOne(id);
+    const business = await this.findOne({ businessId: id });
     if (!business) {
       throw new NotFoundException('business not found');
     }

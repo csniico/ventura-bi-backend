@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -13,7 +14,10 @@ import { MailService } from 'src/mail/mail.service';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
 import { ConfigService } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
+import refreshJwtConfig from './config/refresh-jwt.config';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class AuthService {
@@ -24,12 +28,36 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
+    @Inject(refreshJwtConfig.KEY)
+    private refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
   ) {
     this.csrfDomain = configService.get<string>('CSRF_COOKIE_DOMAIN') || null;
   }
 
+  private async generateTokens(userId: string) {
+    const payload = { sub: userId };
+    const [access_token, refresh_token] = await Promise.all([
+      this.jwtService.signAsync(payload),
+      this.jwtService.signAsync(payload, this.refreshTokenConfig),
+    ]);
+    return { access_token, refresh_token };
+  }
+
   async verifyJwtPayload({ userId }: { userId: string }) {
     return await this.userService.verifyUserId(userId);
+  }
+
+  async verifyRefreshToken({
+    userId,
+    refreshToken,
+  }: {
+    userId: string;
+    refreshToken: string;
+  }) {
+    return await this.userService.verifyUserRefreshToken({
+      userId,
+      refreshToken,
+    });
   }
 
   async validateGoogleUser(dto: CreateUserDto) {
@@ -41,16 +69,23 @@ export class AuthService {
     return await this.userService.handleUserSignIn({ email, password });
   }
 
-  login({ userId, res }: { userId: string; res: Response }) {
-    const payload = { sub: userId };
-    const token = this.jwtService.sign(payload);
+  async login({ userId, res }: { userId: string; res: Response }) {
+    const { access_token, refresh_token } = await this.generateTokens(userId);
 
-    // if (!this.csrfDomain) {
-    //   this.logger.warn('CSRF_COOKIE_DOMAIN is not set.');
-    //   throw new InternalServerErrorException('Server configuration error');
-    // }
+    const hashedRefreshToken = await argon2.hash(refresh_token);
 
-    return res.cookie('access_token', token, {
+    await this.userService.updateUserRefreshToken({
+      userId: userId,
+      hashedRefreshToken: hashedRefreshToken,
+    });
+
+    res.cookie('access_token', access_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+    });
+    res.cookie('refresh_token', refresh_token, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
@@ -102,6 +137,13 @@ export class AuthService {
       user: await this.userService.findUserById(user.id),
       shortToken: null,
     };
+  }
+
+  async signout(userId: string) {
+    await this.userService.updateUserRefreshToken({
+      userId,
+      hashedRefreshToken: null,
+    });
   }
 
   async confirmEmailAndSendVerificationCode(email: string) {

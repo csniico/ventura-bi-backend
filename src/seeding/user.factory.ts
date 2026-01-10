@@ -1,6 +1,6 @@
 import { User } from 'src/user/entities/user.entity';
 import { setSeederFactory } from 'typeorm-extension';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 
 export const UserFactory = setSeederFactory(User, async (faker) => {
   const user = new User();
@@ -45,7 +45,7 @@ export const UserFactory = setSeederFactory(User, async (faker) => {
   user.firstName = 'Roger';
   user.lastName = 'Ventura';
   user.email = `user@ventura.com`;
-  user.password = await bcrypt.hash('securePassword!23', 10);
+  user.password = await argon2.hash('securePassword!234');
   user.avatarUrl = faker.image.avatar();
   user.isActive = faker.datatype.boolean({ probability: 0.95 });
   user.isSystem = false;

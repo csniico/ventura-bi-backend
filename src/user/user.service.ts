@@ -11,7 +11,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { USER_REPOSITORY } from 'src/constants';
 import { QueryFailedError, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 
 type CreateUserResult = {
   status: 'NEW_USER' | 'EXISTING_USER' | 'EXISTING_GOOGLE_USER';
@@ -26,9 +26,15 @@ export class UserService {
     private userRepository: Repository<User>,
   ) {}
 
-  private async comparePassword(password: string, hash: string) {
+  private async comparePassword({
+    password,
+    hash,
+  }: {
+    password: string;
+    hash: string;
+  }) {
     try {
-      const isMatch = await bcrypt.compare(password, hash);
+      const isMatch = await argon2.verify(hash, password);
       return isMatch;
     } catch (error) {
       this.logger.error('An error occurred while comparing passwords', error);
@@ -42,8 +48,7 @@ export class UserService {
       throw new InternalServerErrorException('An unexpected error occurred.');
     }
     try {
-      const saltRounds = 12;
-      return await bcrypt.hash(password, saltRounds);
+      return await argon2.hash(password);
     } catch (error: any) {
       this.logger.error('Error hashing password', error);
       throw new InternalServerErrorException('An unexpected error occurred.');
@@ -158,6 +163,32 @@ export class UserService {
     return user;
   }
 
+  async verifyUserRefreshToken({
+    userId,
+    refreshToken,
+  }: {
+    userId: string;
+    refreshToken: string;
+  }) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['hashedRefreshToken'],
+    });
+    if (!user || !user.hashedRefreshToken) {
+      this.logger.log('User is null or refresh token is null');
+      return false;
+    }
+    const tokenMatches = await argon2.verify(
+      user.hashedRefreshToken,
+      refreshToken,
+    );
+    if (!tokenMatches) {
+      this.logger.log('User refresh tokens do not match');
+      return false;
+    }
+    return true;
+  }
+
   async handleUserSignIn({
     email,
     password,
@@ -176,11 +207,17 @@ export class UserService {
       .getOne();
 
     if (!user) {
-      await this.comparePassword('password', 'hash'); // Mitigation for timing attacks
+      await this.comparePassword({
+        password: 'password',
+        hash: '$argon2id$v=19$m=65536,t=3,p=4$sJsT3WFDBZwmGu6gn17DUw$AxZu0VCHkDW04PfhfoyHkgzLx8MaAOemTEYRNwvCj/I',
+      }); // Mitigation for timing attacks
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const isPasswordValid = await this.comparePassword(password, user.password);
+    const isPasswordValid = await this.comparePassword({
+      password,
+      hash: user.password,
+    });
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials.');
     }
@@ -191,7 +228,7 @@ export class UserService {
   }
 
   async verifyPassword({ password, hash }: { password: string; hash: string }) {
-    return await this.comparePassword(password, hash);
+    return await this.comparePassword({ password, hash });
   }
 
   async createUser({
@@ -330,10 +367,10 @@ export class UserService {
       if (!user) {
         return new NotFoundException('User not found.');
       }
-      const isPasswordMatch = await this.comparePassword(
-        oldPassword,
-        user.password,
-      );
+      const isPasswordMatch = await this.comparePassword({
+        password: oldPassword,
+        hash: user.password,
+      });
       if (!isPasswordMatch) {
         return new BadRequestException('Old password does not match.');
       }
@@ -384,5 +421,20 @@ export class UserService {
       throw new NotFoundException('User not found.');
     }
     return await this.userRepository.remove(user);
+  }
+
+  async updateUserRefreshToken({
+    userId,
+    hashedRefreshToken,
+  }: {
+    userId: string;
+    hashedRefreshToken: string | null;
+  }) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    user.hashedRefreshToken = hashedRefreshToken;
+    await this.userRepository.save(user);
   }
 }

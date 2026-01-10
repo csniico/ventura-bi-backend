@@ -4,7 +4,7 @@ packages:
 onlyBuiltDependencies:
   - '@nestjs/core'
   - '@scarf/scarf'
-  - bcrypt
+  - argon2
   - ffmpeg-static
   - msgpackr-extract
   - sharp
