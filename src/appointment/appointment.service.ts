@@ -48,7 +48,7 @@ export class AppointmentService {
       return null;
     }
     try {
-      const business = await this.businessService.findOne(businessId);
+      const business = await this.businessService.findOne({ businessId });
       if (!business) {
         return null;
       }

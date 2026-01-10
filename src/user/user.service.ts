@@ -26,7 +26,13 @@ export class UserService {
     private userRepository: Repository<User>,
   ) {}
 
-  private async comparePassword(password: string, hash: string) {
+  private async comparePassword({
+    password,
+    hash,
+  }: {
+    password: string;
+    hash: string;
+  }) {
     try {
       const isMatch = await argon2.verify(hash, password);
       return isMatch;
@@ -201,11 +207,17 @@ export class UserService {
       .getOne();
 
     if (!user) {
-      await this.comparePassword('password', 'hash'); // Mitigation for timing attacks
+      await this.comparePassword({
+        password: 'password',
+        hash: '$argon2id$v=19$m=65536,t=3,p=4$sJsT3WFDBZwmGu6gn17DUw$AxZu0VCHkDW04PfhfoyHkgzLx8MaAOemTEYRNwvCj/I',
+      }); // Mitigation for timing attacks
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const isPasswordValid = await this.comparePassword(password, user.password);
+    const isPasswordValid = await this.comparePassword({
+      password,
+      hash: user.password,
+    });
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials.');
     }
@@ -216,7 +228,7 @@ export class UserService {
   }
 
   async verifyPassword({ password, hash }: { password: string; hash: string }) {
-    return await this.comparePassword(password, hash);
+    return await this.comparePassword({ password, hash });
   }
 
   async createUser({
@@ -355,10 +367,10 @@ export class UserService {
       if (!user) {
         return new NotFoundException('User not found.');
       }
-      const isPasswordMatch = await this.comparePassword(
-        oldPassword,
-        user.password,
-      );
+      const isPasswordMatch = await this.comparePassword({
+        password: oldPassword,
+        hash: user.password,
+      });
       if (!isPasswordMatch) {
         return new BadRequestException('Old password does not match.');
       }

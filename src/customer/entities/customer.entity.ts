@@ -29,7 +29,7 @@ export class Customer {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, unique: true })
   email: string;
 
   @Column({ nullable: true })
@@ -37,6 +37,9 @@ export class Customer {
 
   @Column({ type: 'text', nullable: true })
   notes: string;
+
+  @Column({ nullable: true, select: false })
+  hashedPassword: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
