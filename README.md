@@ -1,98 +1,225 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Ventura Backend Service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+A comprehensive backend service built with NestJS for managing business operations, appointments, customers, and resources (products & services).
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Ventura is a modern business management platform backend that provides:
 
-## Project setup
+- **Authentication & Authorization** - JWT-based auth with Google OAuth integration
+- **Business Management** - Multi-tenant business operations
+- **Customer Management** - Customer profiles and relationship tracking
+- **Appointment System** - Scheduling and calendar integration with Google Calendar
+- **Resource Management** - Products and services with inventory tracking
+- **File Storage** - Image and file upload handling
+- **Email Service** - Transactional emails with queue processing
+- **Security** - Row-level security with ownership verification
+
+## Tech Stack
+
+- **Framework**: NestJS (Node.js)
+- **Database**: PostgreSQL with TypeORM
+- **Authentication**: Passport.js (JWT, Google OAuth)
+- **Queue**: Bull (Redis-backed job processing)
+- **Email**: Nodemailer
+- **Validation**: class-validator, class-transformer
+- **Package Manager**: pnpm
+
+## Project Setup
 
 ```bash
+# Install dependencies
 $ pnpm install
+
+# Set up environment variables
+# Copy .env.example to .env and configure your variables
 ```
 
-## Compile and run the project
+## Environment Variables
+
+Create a `.env` file with the following variables:
+
+```env
+# Database
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USER=postgres
+DATABASE_PASSWORD=your_password
+DATABASE_NAME=ventura_db
+
+# JWT
+JWT_SECRET=your_jwt_secret
+JWT_REFRESH_SECRET=your_refresh_secret
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+
+# Redis (for Bull queues)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Email
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USER=your_email@gmail.com
+MAIL_PASSWORD=your_app_password
+```
+
+## Run the Application
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
+# Development mode
 $ pnpm run start:dev
 
-# production mode
+# Production mode
 $ pnpm run start:prod
+
+# Debug mode
+$ pnpm run start:debug
 ```
 
-## Run tests
+## Database Setup
 
 ```bash
-# unit tests
+# Run migrations (if applicable)
+$ pnpm run migration:run
+
+# Run seeders
+$ pnpm run seed
+```
+
+## API Endpoints
+
+### Authentication
+
+- `POST /auth/signup` - Register new user
+- `POST /auth/login` - Login with credentials
+- `POST /auth/confirm-email` - Confirm email with code
+- `GET /auth/google` - Google OAuth login
+- `POST /auth/refresh` - Refresh access token
+
+### Business
+
+- `POST /business` - Create business
+- `GET /business/:id` - Get business details
+- `PUT /business/:id` - Update business
+- `DELETE /business/:id` - Delete business
+
+### Customers
+
+- `POST /customers` - Create customer
+- `GET /customers?filter=one&customerId=xxx` - Get one customer
+- `GET /customers?filter=many&limit=10&page=1` - Get customers list
+- `PUT /customers/:customerId` - Update customer
+- `DELETE /customers/:customerId` - Delete customer
+
+### Resources (Products & Services)
+
+- `GET /resource/search?q=keyword&filters=on&minPrice=0&maxPrice=1000` - Search resources
+- `POST /resource/product` - Create product
+- `POST /resource/service` - Create service
+- `GET /resource?type=product&filter=one&resourceId=xxx` - Get one resource
+- `PUT /resource/product/:productId` - Update product
+- `PUT /resource/service/:serviceId` - Update service
+- `DELETE /resource/product/:productId` - Delete product
+- `DELETE /resource/service/:serviceId` - Delete service
+
+### Appointments
+
+- `POST /appointments` - Create appointment
+- `GET /appointments` - List appointments
+- `PUT /appointments/:id` - Update appointment
+- `DELETE /appointments/:id` - Delete appointment
+
+## Run Tests
+
+```bash
+# Unit tests
 $ pnpm run test
 
-# e2e tests
+# E2E tests
 $ pnpm run test:e2e
 
-# test coverage
+# Test coverage
 $ pnpm run test:cov
+```
+
+## Project Structure
+
+```
+src/
+├── auth/              # Authentication & authorization
+├── business/          # Business management
+├── customer/          # Customer management
+├── appointment/       # Appointment scheduling
+├── resource/          # Products & services
+│   ├── entities/
+│   │   ├── product.entity.ts
+│   │   └── service.entity.ts
+│   ├── dto/
+│   └── resource.service.ts
+├── mail/              # Email service with queue
+├── storage/           # File storage handling
+├── database/          # Database configuration
+├── common/            # Shared middleware, guards, etc.
+└── main.ts           # Application entry point
+```
+
+## Key Features
+
+### Authentication
+
+- Email/password registration with confirmation codes
+- Google OAuth integration
+- JWT access & refresh tokens
+- Password reset functionality
+
+### Multi-tenancy
+
+- Business-scoped data isolation
+- Owner verification on all operations
+- Row-level security
+
+### Resource Management
+
+- Unified product and service management
+- Advanced search with price/quantity filters
+- Pagination support (default: 20 items/page)
+- Soft delete support
+
+### Validation
+
+- DTO-based request validation
+- Conditional validation with ValidateIf
+- Type transformation for query parameters
+
+## Development
+
+### Code Style
+
+- ESLint configuration included
+- Prettier for formatting
+- TypeScript strict mode enabled
+
+### Database Migrations
+
+```bash
+# Generate migration
+$ pnpm run migration:generate --name=MigrationName
+
+# Run migrations
+$ pnpm run migration:run
+
+# Revert migration
+$ pnpm run migration:revert
 ```
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+See [NestJS deployment documentation](https://docs.nestjs.com/deployment) for production deployment guidelines.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is [MIT licensed](LICENSE).
