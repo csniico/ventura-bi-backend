@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
-import type { Request, Response } from 'express';
+import type { Request, Response, CookieOptions } from 'express';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { CreateGoogleUserDto } from 'src/user/dto/create-google-user.dto';
 import { User } from 'src/user/entities/user.entity';
@@ -155,18 +155,20 @@ export class AuthController {
       await this.authService.signout(id);
     }
 
-    res.clearCookie('access_token', {
+    const cookieDomain = this.configService.get<string>('CSRF_COOKIE_DOMAIN');
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions: CookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       path: '/',
-    });
-    res.clearCookie('refresh_token', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-    });
+    };
+    if (cookieDomain && !cookieDomain.includes('localhost')) {
+      cookieOptions.domain = cookieDomain;
+    }
+
+    res.clearCookie('access_token', cookieOptions);
+    res.clearCookie('refresh_token', cookieOptions);
   }
 
   @UseGuards(RefreshAuthGuard)

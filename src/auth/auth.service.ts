@@ -9,7 +9,7 @@ import {
 import { UserService } from 'src/user/user.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
-import type { Response } from 'express';
+import type { Response, CookieOptions } from 'express';
 import { MailService } from 'src/mail/mail.service';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
 import { ResendCodeDTO } from 'src/auth/dto/resend-code.dto';
@@ -79,18 +79,21 @@ export class AuthService {
       hashedRefreshToken: hashedRefreshToken,
     });
 
-    res.cookie('access_token', access_token, {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions: CookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       path: '/',
-    });
-    res.cookie('refresh_token', refresh_token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/',
-    });
+    };
+
+    // Only set domain for production (non-localhost)
+    if (this.csrfDomain && !this.csrfDomain.includes('localhost')) {
+      cookieOptions.domain = this.csrfDomain;
+    }
+
+    res.cookie('access_token', access_token, cookieOptions);
+    res.cookie('refresh_token', refresh_token, cookieOptions);
   }
 
   async signup({
