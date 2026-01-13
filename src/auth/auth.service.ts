@@ -80,15 +80,21 @@ export class AuthService {
       hashedRefreshToken: hashedRefreshToken,
     });
 
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+
     const cookieOptions: CookieOptions = {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      // MUST be true if SameSite is 'none'.
+      // For local dev calling a remote API, both need to be True/None.
+      secure: true,
+      sameSite: isProduction ? 'lax' : 'none',
       path: '/',
     };
 
-    // Only set domain for production (non-localhost)
-    if (this.csrfDomain && !this.csrfDomain.includes('localhost')) {
+    // Only set domain in production.
+    // If developers are on localhost, setting a .site domain will prevent the browser from saving it.
+    if (isProduction && this.csrfDomain) {
       cookieOptions.domain = this.csrfDomain;
     }
 

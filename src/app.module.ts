@@ -12,6 +12,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { StorageModule } from './storage/storage.module';
 import { CustomerModule } from './customer/customer.module';
 import { ResourceModule } from './resource/resource.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ResourceModule } from './resource/resource.module';
     StorageModule,
     CustomerModule,
     ResourceModule,
+    OrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
