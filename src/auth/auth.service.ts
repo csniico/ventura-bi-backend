@@ -32,6 +32,7 @@ export class AuthService {
     private refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
   ) {
     this.csrfDomain = configService.get<string>('CSRF_COOKIE_DOMAIN') || null;
+    this.logger.debug(`CSRF_COOKIE_DOMAIN set to: ${this.csrfDomain}`);
   }
 
   private async generateTokens(userId: string) {
@@ -79,11 +80,10 @@ export class AuthService {
       hashedRefreshToken: hashedRefreshToken,
     });
 
-    const isProduction = process.env.NODE_ENV === 'production';
     const cookieOptions: CookieOptions = {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      secure: false,
+      sameSite: 'lax',
       path: '/',
     };
 
