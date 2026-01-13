@@ -38,6 +38,13 @@ export interface IUpdateProductParams {
   price?: number;
 }
 
+export interface IUpdateProductInventoryParams {
+  ownerId: string;
+  businessId: string;
+  productId: string;
+  quantityChange: number; // positive or negative
+}
+
 export interface IUpdateServiceParams {
   ownerId: string;
   businessId: string;

@@ -21,7 +21,8 @@ export const databaseProviders = [
               }
             : false,
         entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        synchronize: false, // Changed to false - using migrations now
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
       });
       return dataSource.initialize();
     },
