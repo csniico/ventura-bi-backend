@@ -11,5 +11,6 @@ import { CustomerModule } from 'src/customer/customer.module';
   imports: [DatabaseModule, BusinessModule, ResourceModule, CustomerModule],
   controllers: [OrderController],
   providers: [...orderProviders, OrderService],
+  exports: [OrderService],
 })
 export class OrderModule {}

@@ -13,6 +13,7 @@ import { StorageModule } from './storage/storage.module';
 import { CustomerModule } from './customer/customer.module';
 import { ResourceModule } from './resource/resource.module';
 import { OrderModule } from './order/order.module';
+import { InvoiceModule } from './invoice/invoice.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { OrderModule } from './order/order.module';
     CustomerModule,
     ResourceModule,
     OrderModule,
+    InvoiceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
