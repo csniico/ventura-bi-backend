@@ -4,11 +4,17 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { OrderItem } from './order-item.entity';
+import { Invoice } from 'src/invoice/entities/invoice.entity';
+import { Business } from 'src/business/entities/business.entity';
+import { Customer } from 'src/customer/entities/customer.entity';
+
 export enum OrderStatus {
   PENDING = 'pending',
   COMPLETED = 'completed',
@@ -29,6 +35,9 @@ export class Order {
   @Column('uuid', { nullable: true })
   customerId: string;
 
+  @Column('uuid', { nullable: true })
+  invoiceId: string;
+
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
 
@@ -36,8 +45,20 @@ export class Order {
   totalAmount: number;
 
   // RELATIONS
+  @ManyToOne(() => Business)
+  @JoinColumn({ name: 'businessId' })
+  business: Business;
+
+  @ManyToOne(() => Customer)
+  @JoinColumn({ name: 'customerId' })
+  customer: Customer;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items: OrderItem[];
+
+  @ManyToOne(() => Invoice, (invoice) => invoice.orders, { nullable: true })
+  @JoinColumn({ name: 'invoiceId' })
+  invoice: Invoice;
 
   @CreateDateColumn()
   createdAt: Date;

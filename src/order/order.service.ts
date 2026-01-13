@@ -16,6 +16,7 @@ import {
   IGetOrderByIdParams,
   IGetOrdersParams,
   IGetOrderStatsParams,
+  ILinkOrdersToInvoiceParams,
   IOrderItemResourceValidationParams,
   IResourceValidationError,
   ISearchOrdersParams,
@@ -556,5 +557,33 @@ export class OrderService {
       avgOrderValue,
       topItems,
     };
+  }
+
+  async linkOrdersToInvoice(params: ILinkOrdersToInvoiceParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const { orderIds, invoiceId } = params;
+
+    // Update all orders with the invoiceId
+    await Promise.all(
+      orderIds.map(async (orderId) => {
+        const order = await this.orderRepository.findOne({
+          where: { id: orderId, businessId: params.businessId },
+        });
+
+        if (!order) {
+          this.logger.warn(`Order ${orderId} not found for invoice linking`);
+          throw new NotFoundException(`Order with ID ${orderId} not found`);
+        }
+
+        order.invoiceId = invoiceId;
+        return await this.orderRepository.save(order);
+      }),
+    );
+
+    return { success: true, linkedOrders: orderIds.length };
   }
 }

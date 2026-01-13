@@ -83,3 +83,10 @@ export interface IGetOrderStatsParams {
   startDate?: string;
   endDate?: string;
 }
+
+export interface ILinkOrdersToInvoiceParams {
+  orderIds: string[];
+  invoiceId: string;
+  businessId: string;
+  ownerId: string;
+}
