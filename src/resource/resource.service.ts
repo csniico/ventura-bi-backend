@@ -21,6 +21,7 @@ import {
   IGetProductsByIdsParams,
   IGetServicesByIdsParams,
   ISearchProductsAndServicesParams,
+  IUpdateProductInventoryParams,
   IUpdateProductParams,
   IUpdateServiceParams,
 } from './interfaces/resource.interfaces';
@@ -151,6 +152,25 @@ export class ResourceService {
       businessHours: params.businessHours,
     });
     return this.serviceRepository.save(newService);
+  }
+
+  async updateProductInventory(params: IUpdateProductInventoryParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+    const product = await this.productRepository.findOne({
+      where: { id: params.productId, businessId: params.businessId },
+    });
+    if (!product) {
+      this.logger.warn(`Product not found for inventory update`);
+      throw new NotFoundException('Product not found');
+    }
+    product.availableQuantity += params.quantityChange;
+    if (product.availableQuantity < 0) {
+      product.availableQuantity = 0; // Prevent negative inventory
+    }
+    return this.productRepository.save(product);
   }
 
   async updateProduct(params: IUpdateProductParams) {
