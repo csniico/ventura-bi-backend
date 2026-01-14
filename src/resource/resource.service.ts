@@ -70,10 +70,14 @@ export class ResourceService {
       .createQueryBuilder('product')
       .where('product.businessId = :businessId', {
         businessId: params.businessId,
-      })
-      .andWhere('product.name ILIKE :searchTerm', {
+      });
+
+    // Only apply name filter if searchQuery is not empty
+    if (params.searchQuery && params.searchQuery.trim() !== '') {
+      productQuery = productQuery.andWhere('product.name ILIKE :searchTerm', {
         searchTerm: `%${params.searchQuery}%`,
       });
+    }
 
     if (params.searchFilters?.minPrice !== undefined) {
       productQuery = productQuery.andWhere('product.price >= :minPrice', {
@@ -90,10 +94,14 @@ export class ResourceService {
       .createQueryBuilder('service')
       .where('service.businessId = :businessId', {
         businessId: params.businessId,
-      })
-      .andWhere('service.name ILIKE :searchTerm', {
+      });
+
+    // Only apply name filter if searchQuery is not empty
+    if (params.searchQuery && params.searchQuery.trim() !== '') {
+      serviceQuery = serviceQuery.andWhere('service.name ILIKE :searchTerm', {
         searchTerm: `%${params.searchQuery}%`,
       });
+    }
 
     if (params.searchFilters?.minPrice !== undefined) {
       serviceQuery = serviceQuery.andWhere('service.price >= :minPrice', {
