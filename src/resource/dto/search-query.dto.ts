@@ -16,7 +16,6 @@ export class SearchQueryDto {
   businessId: string;
 
   @IsString()
-  @IsNotEmpty()
   q: string;
 
   @IsOptional()
