@@ -30,6 +30,12 @@ export enum PaymentMethod {
   CHEQUE = 'CHEQUE',
 }
 
+export enum InvoiceType {
+  STANDARD = 'STANDARD',
+  PROFORMA = 'PROFORMA',
+  RECIEPT = 'RECIEPT',
+}
+
 @Entity('invoices')
 export class Invoice {
   @PrimaryGeneratedColumn('uuid')
@@ -43,6 +49,13 @@ export class Invoice {
 
   @Column({ type: 'uuid' })
   customerId: string;
+
+  @Column({
+    type: 'enum',
+    enum: InvoiceType,
+    default: InvoiceType.STANDARD,
+  })
+  invoiceType?: InvoiceType;
 
   // Relationships
   @ManyToOne(() => Business, { nullable: false })

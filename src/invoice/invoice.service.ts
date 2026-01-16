@@ -237,6 +237,8 @@ export class InvoiceService {
       .take(limit)
       .getManyAndCount();
 
+    this.logger.log({ invoices, total });
+
     return {
       data: invoices,
       meta: {
