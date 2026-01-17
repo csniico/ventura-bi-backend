@@ -12,6 +12,7 @@ import {
 import { Business } from 'src/business/entities/business.entity';
 import { Customer } from 'src/customer/entities/customer.entity';
 import { Order } from 'src/order/entities/order.entity';
+import { nanoid } from 'nanoid';
 
 export enum InvoiceStatus {
   DRAFT = 'DRAFT',
@@ -30,6 +31,12 @@ export enum PaymentMethod {
   CHEQUE = 'CHEQUE',
 }
 
+export enum InvoiceType {
+  STANDARD = 'STANDARD',
+  PROFORMA = 'PROFORMA',
+  RECIEPT = 'RECIEPT',
+}
+
 @Entity('invoices')
 export class Invoice {
   @PrimaryGeneratedColumn('uuid')
@@ -43,6 +50,13 @@ export class Invoice {
 
   @Column({ type: 'uuid' })
   customerId: string;
+
+  @Column({
+    type: 'enum',
+    enum: InvoiceType,
+    default: InvoiceType.STANDARD,
+  })
+  invoiceType?: InvoiceType;
 
   // Relationships
   @ManyToOne(() => Business, { nullable: false })
@@ -129,10 +143,16 @@ export class Invoice {
 
   @BeforeInsert()
   generateInvoiceNumber() {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, '0');
-    this.invoiceNumber = `INV-${timestamp}${random}`;
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const date = now.getDate().toString().padStart(2, '0');
+    const hour = now.getHours().toString().padStart(2, '0');
+    const minute = now.getMinutes().toString().padStart(2, '0');
+    const second = now.getSeconds().toString().padStart(2, '0');
+    const milliseconds = now.getMilliseconds().toString().padStart(3, '0');
+    const timestamp = `${year}${month}${date}${hour}${minute}${second}${milliseconds}`;
+    const rand = nanoid(6).toUpperCase().replaceAll('-', ''); // collision protection
+    this.invoiceNumber = `VEN-${timestamp}-${rand}`;
   }
 }
