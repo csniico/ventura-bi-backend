@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { Invoice, InvoiceStatus } from './entities/invoice.entity';
+import { Invoice, InvoiceStatus, InvoiceType } from './entities/invoice.entity';
 import { BusinessService } from 'src/business/business.service';
 import { CustomerService } from 'src/customer/customer.service';
 import { OrderService } from 'src/order/order.service';
@@ -23,7 +23,6 @@ import {
 } from './interfaces/invoice.interfaces';
 import { OrderStatus } from 'src/order/entities/order.entity';
 
-// Ghana VAT Structure (Effective Jan 1, 2026)
 const VAT_RATE = 0.15; // 15%
 const NHIL_RATE = 0.025; // 2.5%
 const GETFUND_RATE = 0.025; // 2.5%
@@ -120,8 +119,11 @@ export class InvoiceService {
         });
       }
 
-      // Check if order is completed
-      if (order.status !== OrderStatus.COMPLETED) {
+      // Check if order is completed if invoice is not PROFORMA
+      if (
+        params.invoiceType !== InvoiceType.PROFORMA &&
+        order.status !== OrderStatus.COMPLETED
+      ) {
         validationErrors.push({
           orderId,
           orderNumber: order.orderNumber,
@@ -170,6 +172,7 @@ export class InvoiceService {
       issueDate: new Date(),
       dueDate: new Date(params.dueDate),
       notes: params.notes,
+      invoiceType: params.invoiceType,
     });
 
     const invoice = await this.invoiceRepository.save(newInvoice);
@@ -236,8 +239,6 @@ export class InvoiceService {
       .skip(skip)
       .take(limit)
       .getManyAndCount();
-
-    this.logger.log({ invoices, total });
 
     return {
       data: invoices,

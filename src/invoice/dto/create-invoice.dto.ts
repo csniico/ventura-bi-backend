@@ -1,11 +1,13 @@
 import {
   IsArray,
   IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
 } from 'class-validator';
+import { InvoiceType } from '../entities/invoice.entity';
 
 export class CreateInvoiceDto {
   @IsUUID()
@@ -24,6 +26,10 @@ export class CreateInvoiceDto {
   @IsDateString()
   @IsNotEmpty()
   dueDate: string;
+
+  @IsOptional()
+  @IsEnum(InvoiceType)
+  invoiceType?: InvoiceType;
 
   @IsOptional()
   @IsString()

@@ -1,4 +1,8 @@
-import { InvoiceStatus, PaymentMethod } from '../entities/invoice.entity';
+import {
+  InvoiceStatus,
+  InvoiceType,
+  PaymentMethod,
+} from '../entities/invoice.entity';
 
 export interface ICreateInvoice {
   businessId: string;
@@ -7,6 +11,7 @@ export interface ICreateInvoice {
   dueDate: string;
   ownerId: string;
   notes?: string;
+  invoiceType?: InvoiceType;
 }
 
 export interface IGetInvoicesParams {

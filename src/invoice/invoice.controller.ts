@@ -20,6 +20,7 @@ import { GetInvoicesQueryDto } from './dto/get-invoices-query.dto';
 import { GetCustomerInvoicesQueryDto } from './dto/get-customer-invoices-query.dto';
 import { UpdateInvoicePaymentDto } from './dto/update-invoice-payment.dto';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
+import { InvoiceType } from './entities/invoice.entity';
 
 @UseGuards(JwtAuthGuard)
 @Controller('invoices')
@@ -54,6 +55,7 @@ export class InvoiceController {
       orderIds: dto.orderIds,
       dueDate: dto.dueDate,
       notes: dto.notes,
+      invoiceType: dto.invoiceType ?? InvoiceType.STANDARD,
       ownerId,
     });
   }
