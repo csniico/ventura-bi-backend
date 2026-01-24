@@ -19,6 +19,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-cutomer.dto';
 import { FindCustomersQueryDto } from './dto/find-customers-query.dto';
+import { ImportCustomersDto } from './dto/import-customers.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('customers')
@@ -83,6 +84,24 @@ export class CustomerController {
       email: dto.email,
       phone: dto.phone,
       notes: dto.notes,
+    });
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/import')
+  async importCustomers(
+    @Req() req: { user: { userId: string } },
+    @Body() dto: ImportCustomersDto,
+  ) {
+    const ownerId = this.getUserId(req);
+    if (!ownerId) {
+      this.logger.warn('User ID not found in request');
+      throw new UnauthorizedException('User not authorized');
+    }
+    return await this.customerService.importCustomers({
+      ownerId,
+      businessId: dto.businessId,
+      customers: dto.customers,
     });
   }
 

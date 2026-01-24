@@ -43,3 +43,22 @@ export interface IDeleteCustomerParams {
   ownerId: string;
   businessId: string;
 }
+
+export interface IImportCustomerItem {
+  name: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
+export interface IImportCustomersParams {
+  ownerId: string;
+  businessId: string;
+  customers: IImportCustomerItem[];
+}
+
+export interface IImportCustomersResult {
+  imported: number;
+  failed: number;
+  customers: Customer[];
+}

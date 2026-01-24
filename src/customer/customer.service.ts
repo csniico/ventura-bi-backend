@@ -15,6 +15,8 @@ import {
   IFindCustomersParams,
   IFindCustomersResults,
   IFindOneCustomerParams,
+  IImportCustomersParams,
+  IImportCustomersResult,
   IUpdateCustomerParams,
   IVerifyOwnershipParams,
 } from './interfaces/customer.interfaces';
@@ -151,5 +153,55 @@ export class CustomerService {
       businessId: params.businessId,
     });
     await this.customerRepository.remove(customer);
+  }
+
+  /**
+   * imports multiple customers from an array after verifying ownership
+   * @param params params for importing customers {@link IImportCustomersParams}
+   * @returns {Promise<IImportCustomersResult>} - resolves to result with imported count and created customers
+   */
+  async importCustomers(
+    params: IImportCustomersParams,
+  ): Promise<IImportCustomersResult> {
+    const { ownerId, businessId, customers } = params;
+
+    await this.verifyOwnership({ businessId, ownerId });
+
+    const customerEntities = customers.map((customerData) =>
+      this.customerRepository.create({
+        name: customerData.name,
+        businessId,
+        email: customerData.email,
+        phone: customerData.phone,
+        notes: customerData.notes,
+      }),
+    );
+
+    const results = await Promise.allSettled(
+      customerEntities.map((customer) =>
+        this.customerRepository.save(customer),
+      ),
+    );
+
+    const createdCustomers: Customer[] = [];
+    let failed = 0;
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        createdCustomers.push(result.value);
+      } else {
+        this.logger.error(
+          `Failed to import customer: ${customers[index].name}`,
+          result.reason,
+        );
+        failed++;
+      }
+    });
+
+    return {
+      imported: createdCustomers.length,
+      failed,
+      customers: createdCustomers,
+    };
   }
 }
