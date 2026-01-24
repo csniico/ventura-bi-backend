@@ -21,6 +21,21 @@ import {
   IUpdateInvoicePaymentParams,
   IUpdateInvoiceStatusParams,
 } from './interfaces/invoice.interfaces';
+import { IInvoiceAnalyticsParams } from './interfaces/invoice-analytics.interfaces';
+
+interface IFinancialSummaryRaw {
+  totalRevenue: string;
+  totalTax: string;
+  vatAmount: string;
+  nhilAmount: string;
+  getfundAmount: string;
+  netRevenue: string;
+}
+
+interface IUnpaidInvoicesRaw {
+  totalUnpaid: string;
+  count: string;
+}
 import { OrderStatus } from 'src/order/entities/order.entity';
 
 const VAT_RATE = 0.15; // 15%
@@ -380,5 +395,185 @@ export class InvoiceService {
 
     invoice.status = params.status;
     return await this.invoiceRepository.save(invoice);
+  }
+
+  /**
+   * Get financial summary for analytics
+   */
+  async getFinancialSummary(params: IInvoiceAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const result = await this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .where('invoice.businessId = :businessId', {
+        businessId: params.businessId,
+      })
+      .andWhere('invoice.status != :cancelledStatus', {
+        cancelledStatus: InvoiceStatus.CANCELLED,
+      })
+      .select('SUM(invoice.totalAmount)', 'totalRevenue')
+      .addSelect('SUM(invoice.totalTax)', 'totalTax')
+      .addSelect('SUM(invoice.vatAmount)', 'vatAmount')
+      .addSelect('SUM(invoice.nhilAmount)', 'nhilAmount')
+      .addSelect('SUM(invoice.getfundAmount)', 'getfundAmount')
+      .addSelect('SUM(invoice.subtotal)', 'netRevenue')
+      .getRawOne<IFinancialSummaryRaw>();
+
+    return {
+      totalRevenue: Number(result?.totalRevenue) || 0,
+      totalTax: Number(result?.totalTax) || 0,
+      vatAmount: Number(result?.vatAmount) || 0,
+      nhilAmount: Number(result?.nhilAmount) || 0,
+      getfundAmount: Number(result?.getfundAmount) || 0,
+      netRevenue: Number(result?.netRevenue) || 0,
+    };
+  }
+
+  /**
+   * Get unpaid invoices for analytics
+   */
+  async getUnpaidInvoices(params: IInvoiceAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const result = await this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .where('invoice.businessId = :businessId', {
+        businessId: params.businessId,
+      })
+      .andWhere('invoice.status IN (:...statuses)', {
+        statuses: [
+          InvoiceStatus.DRAFT,
+          InvoiceStatus.SENT,
+          InvoiceStatus.PARTIALLY_PAID,
+          InvoiceStatus.OVERDUE,
+        ],
+      })
+      .select('COUNT(invoice.id)', 'count')
+      .addSelect('SUM(invoice.totalAmount - invoice.amountPaid)', 'totalUnpaid')
+      .getRawOne<IUnpaidInvoicesRaw>();
+
+    return {
+      amount: Number(result?.totalUnpaid) || 0,
+      count: Number(result?.count) || 0,
+    };
+  }
+
+  /**
+   * Get overdue invoices for alerts
+   */
+  async getOverdueInvoices(params: IInvoiceAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const limit = params.limit ?? 10;
+    const now = new Date();
+
+    const overdueInvoices = await this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.customer', 'customer')
+      .where('invoice.businessId = :businessId', {
+        businessId: params.businessId,
+      })
+      .andWhere('invoice.dueDate < :now', { now })
+      .andWhere('invoice.status != :paidStatus', {
+        paidStatus: InvoiceStatus.PAID,
+      })
+      .andWhere('invoice.status != :cancelledStatus', {
+        cancelledStatus: InvoiceStatus.CANCELLED,
+      })
+      .orderBy('invoice.dueDate', 'ASC')
+      .take(limit)
+      .getMany();
+
+    return overdueInvoices.map((invoice) => {
+      const daysOverdue = Math.floor(
+        (now.getTime() - new Date(invoice.dueDate).getTime()) /
+          (1000 * 60 * 60 * 24),
+      );
+      return {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        customerName: invoice.customer?.name || 'Unknown',
+        amount: Number(invoice.totalAmount) - Number(invoice.amountPaid),
+        dueDate: invoice.dueDate,
+        daysOverdue,
+      };
+    });
+  }
+
+  /**
+   * Get cancelled invoices analytics
+   */
+  async getCancelledInvoicesAnalytics(params: IInvoiceAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const cancelledInvoices = await this.invoiceRepository
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.customer', 'customer')
+      .leftJoinAndSelect('invoice.orders', 'order')
+      .leftJoinAndSelect('order.items', 'items')
+      .where('invoice.businessId = :businessId', {
+        businessId: params.businessId,
+      })
+      .andWhere('invoice.status = :cancelledStatus', {
+        cancelledStatus: InvoiceStatus.CANCELLED,
+      })
+      .getMany();
+
+    const total = cancelledInvoices.length;
+    const totalRevenueLost = cancelledInvoices.reduce(
+      (sum, inv) => sum + Number(inv.totalAmount),
+      0,
+    );
+
+    const mappings = cancelledInvoices.map((invoice) => {
+      const firstOrder = invoice.orders?.[0];
+      const products =
+        firstOrder?.items.map((item) => ({
+          productId: item.product?.id || item.service?.id || '',
+          productName: item.name,
+          quantity: item.quantity,
+          price: Number(item.price),
+        })) || [];
+
+      return {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        customerId: invoice.customerId,
+        customerName: invoice.customer?.name || 'Unknown',
+        orderId: firstOrder?.id || null,
+        orderNumber: firstOrder?.orderNumber || null,
+        products,
+        cancelledAt: invoice.updatedAt,
+        reason: invoice.notes || null,
+      };
+    });
+
+    return { total, totalRevenueLost, mappings };
+  }
+
+  /**
+   * Get total invoice count
+   */
+  async getInvoiceCount(params: IInvoiceAnalyticsParams): Promise<number> {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    return await this.invoiceRepository.count({
+      where: { businessId: params.businessId },
+    });
   }
 }

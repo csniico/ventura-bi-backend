@@ -25,6 +25,23 @@ import {
   IUpdateProductParams,
   IUpdateServiceParams,
 } from './interfaces/resource.interfaces';
+import { IResourceAnalyticsParams } from './interfaces/resource-analytics.interfaces';
+
+interface ITopProductRaw {
+  id: string;
+  name: string;
+  primaryImage: string | null;
+  totalrevenue: string;
+  totalquantitysold: string;
+  totalorders: string;
+}
+
+interface IOutOfStockProductRaw {
+  id: string;
+  name: string;
+  lastsolddate: string | null;
+  ordercount: string;
+}
 
 @Injectable()
 export class ResourceService {
@@ -313,5 +330,98 @@ export class ResourceService {
     }
     await this.serviceRepository.remove(service);
     return { message: 'Service deleted successfully' };
+  }
+
+  /**
+   * Get top selling products for analytics
+   */
+  async getTopSellingProducts(params: IResourceAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const limit = params.limit ?? 10;
+
+    // Query to get product sales data from order items
+    const topProducts = await this.productRepository
+      .createQueryBuilder('product')
+      .leftJoin('order_item', 'item', 'item.productId = product.id')
+      .leftJoin('order', 'order', 'order.id = item.orderId')
+      .where('product.businessId = :businessId', {
+        businessId: params.businessId,
+      })
+      .andWhere('order.status != :cancelledStatus', {
+        cancelledStatus: 'cancelled',
+      })
+      .select('product.id', 'id')
+      .addSelect('product.name', 'name')
+      .addSelect('product.primaryImage', 'primaryImage')
+      .addSelect('COALESCE(SUM(item.quantity * item.price), 0)', 'totalrevenue')
+      .addSelect('COALESCE(SUM(item.quantity), 0)', 'totalquantitysold')
+      .addSelect('COUNT(DISTINCT order.id)', 'totalorders')
+      .groupBy('product.id')
+      .orderBy('totalrevenue', 'DESC')
+      .limit(limit)
+      .getRawMany<ITopProductRaw>();
+
+    return topProducts.map((p) => ({
+      id: p.id,
+      name: p.name,
+      primaryImage: p.primaryImage,
+      totalRevenue: Number(p.totalrevenue),
+      totalQuantitySold: Number(p.totalquantitysold),
+      totalOrders: Number(p.totalorders),
+    }));
+  }
+
+  /**
+   * Get out of stock products for alerts
+   */
+  async getOutOfStockProducts(params: IResourceAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const limit = params.limit ?? 10;
+
+    // Get products with zero quantity
+    const outOfStockProducts = await this.productRepository
+      .createQueryBuilder('product')
+      .leftJoin('order_item', 'item', 'item.productId = product.id')
+      .leftJoin('order', 'order', 'order.id = item.orderId')
+      .where('product.businessId = :businessId', {
+        businessId: params.businessId,
+      })
+      .andWhere('product.availableQuantity = 0')
+      .select('product.id', 'id')
+      .addSelect('product.name', 'name')
+      .addSelect('MAX(order.createdAt)', 'lastsolddate')
+      .addSelect('COUNT(DISTINCT order.id)', 'ordercount')
+      .groupBy('product.id')
+      .limit(limit)
+      .getRawMany<IOutOfStockProductRaw>();
+
+    return outOfStockProducts.map((p) => ({
+      id: p.id,
+      name: p.name,
+      lastSoldDate: p.lastsolddate ? new Date(p.lastsolddate) : null,
+      demandScore: Math.min(Number(p.ordercount) * 0.5, 10), // Simple demand score calculation
+    }));
+  }
+
+  /**
+   * Get total product count
+   */
+  async getProductCount(params: IResourceAnalyticsParams): Promise<number> {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    return await this.productRepository.count({
+      where: { businessId: params.businessId },
+    });
   }
 }

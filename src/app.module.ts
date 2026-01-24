@@ -14,6 +14,7 @@ import { CustomerModule } from './customer/customer.module';
 import { ResourceModule } from './resource/resource.module';
 import { OrderModule } from './order/order.module';
 import { InvoiceModule } from './invoice/invoice.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { InvoiceModule } from './invoice/invoice.module';
     ResourceModule,
     OrderModule,
     InvoiceModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

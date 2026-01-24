@@ -22,6 +22,7 @@ import {
   ISearchOrdersParams,
   IUpdateOrderStatusParams,
 } from './interfaces/order.interfaces';
+import { IOrderAnalyticsParams } from './interfaces/order-analytics.interfaces';
 import { BusinessService } from 'src/business/business.service';
 import { IVerifyOwnershipParams } from 'src/customer/interfaces/customer.interfaces';
 import { ResourceService } from 'src/resource/resource.service';
@@ -585,5 +586,115 @@ export class OrderService {
     );
 
     return { success: true, linkedOrders: orderIds.length };
+  }
+
+  /**
+   * Get order statistics for analytics dashboard
+   */
+  async getOrderAnalytics(params: IOrderAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const [total, pending, completed, cancelled] = await Promise.all([
+      this.orderRepository.count({ where: { businessId: params.businessId } }),
+      this.orderRepository.count({
+        where: { businessId: params.businessId, status: OrderStatus.PENDING },
+      }),
+      this.orderRepository.count({
+        where: { businessId: params.businessId, status: OrderStatus.COMPLETED },
+      }),
+      this.orderRepository.count({
+        where: { businessId: params.businessId, status: OrderStatus.CANCELLED },
+      }),
+    ]);
+
+    return { total, pending, completed, cancelled };
+  }
+
+  /**
+   * Get pending orders for alerts
+   */
+  async getPendingOrders(params: IOrderAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const limit = params.limit ?? 10;
+
+    const orders = await this.orderRepository.find({
+      where: { businessId: params.businessId, status: OrderStatus.PENDING },
+      relations: ['customer'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+
+    return orders.map((order) => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      customerName: order.customer?.name || 'Guest',
+      amount: Number(order.totalAmount),
+      createdAt: order.createdAt,
+    }));
+  }
+
+  /**
+   * Get cancelled orders analytics
+   */
+  async getCancelledOrdersAnalytics(params: IOrderAnalyticsParams) {
+    await this.verifyBusinessOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const cancelledOrders = await this.orderRepository.find({
+      where: { businessId: params.businessId, status: OrderStatus.CANCELLED },
+      relations: ['customer', 'invoice', 'items'],
+    });
+
+    const total = cancelledOrders.length;
+    const totalRevenueLost = cancelledOrders.reduce(
+      (sum, order) => sum + Number(order.totalAmount),
+      0,
+    );
+
+    // Group by reason (using a placeholder since Order entity doesn't have a reason field)
+    const reasonMap = new Map<string, { count: number; amount: number }>();
+    cancelledOrders.forEach((order) => {
+      const reason = 'customer_request'; // Default reason
+      const existing = reasonMap.get(reason) || { count: 0, amount: 0 };
+      reasonMap.set(reason, {
+        count: existing.count + 1,
+        amount: existing.amount + Number(order.totalAmount),
+      });
+    });
+
+    const byReason = Array.from(reasonMap.entries()).map(([reason, data]) => ({
+      reason,
+      count: data.count,
+      amount: data.amount,
+    }));
+
+    const details = cancelledOrders.map((order) => ({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerId: order.customerId,
+      customerName: order.customer?.name || null,
+      invoiceId: order.invoiceId,
+      invoiceNumber: order.invoice?.invoiceNumber || null,
+      products: order.items.map((item) => ({
+        productId: item.product?.id || item.service?.id || '',
+        productName: item.name,
+        quantity: item.quantity,
+        price: Number(item.price),
+      })),
+      totalAmount: Number(order.totalAmount),
+      cancelledAt: order.updatedAt,
+      reason: null,
+    }));
+
+    return { total, totalRevenueLost, byReason, details };
   }
 }

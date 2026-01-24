@@ -20,6 +20,17 @@ import {
   IUpdateCustomerParams,
   IVerifyOwnershipParams,
 } from './interfaces/customer.interfaces';
+import { ICustomerAnalyticsParams } from './interfaces/customer-analytics.interfaces';
+
+interface ITopCustomerRaw {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  totalrevenue: string;
+  totalorders: string;
+  lastorderdate: string | null;
+}
 
 @Injectable()
 export class CustomerService {
@@ -203,5 +214,67 @@ export class CustomerService {
       failed,
       customers: createdCustomers,
     };
+  }
+
+  /**
+   * Get top customers by revenue and order count
+   */
+  async getTopCustomers(params: ICustomerAnalyticsParams) {
+    await this.verifyOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    const limit = params.limit ?? 10;
+
+    const topCustomers = await this.customerRepository
+      .createQueryBuilder('customer')
+      .leftJoin('order', 'order', 'order.customerId = customer.id')
+      .where('customer.businessId = :businessId', {
+        businessId: params.businessId,
+      })
+      .andWhere('order.status != :cancelledStatus', {
+        cancelledStatus: 'cancelled',
+      })
+      .select('customer.id', 'id')
+      .addSelect('customer.name', 'name')
+      .addSelect('customer.email', 'email')
+      .addSelect('customer.phone', 'phone')
+      .addSelect('COALESCE(SUM(order.totalAmount), 0)', 'totalrevenue')
+      .addSelect('COUNT(DISTINCT order.id)', 'totalorders')
+      .addSelect('MAX(order.createdAt)', 'lastorderdate')
+      .groupBy('customer.id')
+      .having('COUNT(DISTINCT order.id) > 0')
+      .orderBy('totalrevenue', 'DESC')
+      .limit(limit)
+      .getRawMany<ITopCustomerRaw>();
+
+    return topCustomers.map((c) => ({
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      totalRevenue: Number(c.totalrevenue),
+      totalOrders: Number(c.totalorders),
+      averageOrderValue:
+        Number(c.totalorders) > 0
+          ? Number(c.totalrevenue) / Number(c.totalorders)
+          : 0,
+      lastOrderDate: c.lastorderdate ? new Date(c.lastorderdate) : null,
+    }));
+  }
+
+  /**
+   * Get total customer count
+   */
+  async getCustomerCount(params: ICustomerAnalyticsParams): Promise<number> {
+    await this.verifyOwnership({
+      businessId: params.businessId,
+      ownerId: params.ownerId,
+    });
+
+    return await this.customerRepository.count({
+      where: { businessId: params.businessId },
+    });
   }
 }
