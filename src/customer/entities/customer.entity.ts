@@ -4,9 +4,11 @@ import {
   Column,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Appointment } from '../../appointment/entities/appointment.entity';
 
 @Entity()
 export class Customer {
@@ -29,7 +31,7 @@ export class Customer {
   @Column()
   name: string;
 
-  @Column({ nullable: true, unique: true })
+  @Column({ nullable: true, unique: false })
   email: string;
 
   @Column({ nullable: true })
@@ -40,6 +42,9 @@ export class Customer {
 
   @Column({ nullable: true, select: false })
   hashedPassword: string;
+
+  @OneToMany(() => Appointment, (appointment) => appointment.customer)
+  appointments: Appointment[];
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

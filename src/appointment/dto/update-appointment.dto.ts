@@ -11,25 +11,25 @@ import { RecurringFrequency } from 'src/appointment/dto/create-appointment.dto';
 export class UpdateAppointmentDto {
   @IsNotEmpty()
   @IsString()
-  userId: string;
-
-  @IsNotEmpty()
-  @IsString()
   businessId: string;
 
   @IsOptional()
   @IsString()
-  title?: string;
+  customerId?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  title: string;
+
+  @IsNotEmpty()
   @IsDateString()
-  startTime?: string;
+  startTime: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsDateString()
-  endTime?: string;
+  endTime: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsBoolean()
   isRecurring: boolean;
 

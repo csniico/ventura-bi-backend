@@ -18,11 +18,11 @@ export enum RecurringFrequency {
 export class CreateAppointmentDto {
   @IsUUID()
   @IsNotEmpty()
-  userId: string;
+  businessId: string;
 
   @IsUUID()
-  @IsNotEmpty()
-  businessId: string;
+  @IsOptional()
+  customerId?: string;
 
   @IsString()
   @IsNotEmpty()

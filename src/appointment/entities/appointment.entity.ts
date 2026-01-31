@@ -4,9 +4,18 @@ import {
   Column,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Customer } from '../../customer/entities/customer.entity';
+
+export enum AppointmentStatus {
+  SCHEDULED = 'scheduled',
+  COMPLETED = 'completed',
+  CANCELED = 'canceled',
+}
 
 @Entity()
 export class Appointment {
@@ -44,6 +53,13 @@ export class Appointment {
   @Column()
   userId: string;
 
+  @Column({ nullable: true })
+  customerId: string;
+
+  @ManyToOne(() => Customer, (customer) => customer.appointments)
+  @JoinColumn({ name: 'customerId' })
+  customer: Customer;
+
   @Column()
   isRecurring: boolean;
 
@@ -55,6 +71,13 @@ export class Appointment {
 
   @Column({ nullable: true, default: 'none' })
   googleEventId: string;
+
+  @Column({
+    type: 'enum',
+    enum: AppointmentStatus,
+    default: AppointmentStatus.SCHEDULED,
+  })
+  status: AppointmentStatus;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

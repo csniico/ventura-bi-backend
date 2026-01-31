@@ -9,6 +9,8 @@ import {
   Post,
   Put,
   Query,
+  Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
@@ -23,6 +25,14 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth/jwt-auth.guard';
 export class AppointmentController {
   private readonly logger = new Logger('AppointmentController');
   constructor(private readonly appointmentService: AppointmentService) {}
+
+  private getUserId(req: { user: { userId: string } }): string {
+    if ('userId' in req.user) {
+      return req.user.userId;
+    } else {
+      throw new UnauthorizedException('User not authorized');
+    }
+  }
 
   @Get('/user')
   async findByUserId(@Query('userId') userId: string) {
@@ -45,9 +55,25 @@ export class AppointmentController {
   }
 
   @Post()
-  async createAppointment(@Body() dto: CreateAppointmentDto) {
+  async createAppointment(
+    @Req() req: { user: { userId: string } },
+    @Body() dto: CreateAppointmentDto,
+  ) {
     try {
-      return await this.appointmentService.create(dto);
+      const ownerId = this.getUserId(req);
+      return await this.appointmentService.create({
+        businessId: dto.businessId,
+        endTime: dto.endTime,
+        startTime: dto.startTime,
+        title: dto.title,
+        isRecurring: dto.isRecurring,
+        description: dto.description,
+        notes: dto.notes,
+        customerId: dto.customerId,
+        recurringFrequency: dto.recurringFrequency,
+        recurringUntil: dto.recurringUntil,
+        userId: ownerId,
+      });
     } catch (e) {
       this.logger.error(e);
       throw e;
@@ -72,18 +98,25 @@ export class AppointmentController {
 
   @Put('/:id')
   async updateAppointment(
-    @Param('id') id: string,
-    @Body() dto: UpdateAppointmentDto,
+    @Req() req: { user: { userId: string } },
+    @Param('id') appointmentId: string,
+    @Body() body: UpdateAppointmentDto,
   ) {
-    try {
-      return this.appointmentService.updateAppointment({
-        appointmentId: id,
-        partials: dto,
-      });
-    } catch (e) {
-      this.logger.error(e);
-      throw e;
-    }
+    const ownerId = this.getUserId(req);
+    return await this.appointmentService.update({
+      appointmentId,
+      businessId: body.businessId,
+      ownerId,
+      endTime: body.endTime,
+      startTime: body.startTime,
+      title: body.title,
+      isRecurring: body.isRecurring,
+      description: body.description,
+      notes: body.notes,
+      customerId: body.customerId,
+      recurringFrequency: body.recurringFrequency,
+      recurringUntil: body.recurringUntil,
+    });
   }
 
   @Delete('/:id')

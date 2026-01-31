@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Inject,
   Injectable,
   Logger,
@@ -76,6 +77,20 @@ export class CustomerService {
     }
   }
 
+  async customerExists(customerId: string): Promise<void> {
+    const exists = await this.customerRepository.exists({
+      where: { id: customerId },
+    });
+    if (!exists) {
+      this.logger.warn(
+        `Attempted to reference non-existent customer with id ${customerId}`,
+      );
+      throw new UnauthorizedException(
+        'You do not have permission to access this customer',
+      ); //Mitigate information leakage
+    }
+  }
+
   /**
    * retireves a customer by their customer ID after verifying ownership
    * @param params params for finding one customer of a business {@link IFindOneCustomerParams}
@@ -126,6 +141,22 @@ export class CustomerService {
       ownerId: params.ownerId,
     });
 
+    const existingCustomer = await this.customerRepository.findOne({
+      where: {
+        businessId: params.businessId,
+        email: params.email,
+      },
+    });
+
+    if (existingCustomer) {
+      this.logger.warn(
+        `Attempted to create a customer with an email that already exists for this business: ${params.email}`,
+      );
+      throw new ConflictException(
+        'A customer with this email already exists in the business',
+      );
+    }
+
     const new_customer = this.customerRepository.create({
       name: params.name,
       businessId: params.businessId,
@@ -143,13 +174,34 @@ export class CustomerService {
    * @returns {Promise<Customer>} - resolves to updated customer or unauthorized exception
    */
   async updateOne(params: IUpdateCustomerParams): Promise<Customer> {
-    const customer = await this.findOne({
+    if (params.payload.email) {
+      const existingCustomer = await this.customerRepository.findOne({
+        where: {
+          businessId: params.payload.businessId,
+          email: params.payload.email,
+        },
+      });
+      if (existingCustomer && existingCustomer.id !== params.customerId) {
+        this.logger.warn(
+          `Attempted to update a customer with an email that already exists for this business: ${params.payload.email}`,
+        );
+        throw new ConflictException(
+          'A customer with this email already exists in the business',
+        );
+      }
+    }
+
+    await this.customerRepository.update(params.customerId, {
+      email: params.payload.email,
+      name: params.payload.name,
+      phone: params.payload.phone,
+      notes: params.payload.notes,
+    });
+    return await this.findOne({
       customerId: params.customerId,
       ownerId: params.ownerId,
       businessId: params.payload.businessId ?? '',
     });
-    Object.assign(customer, params.payload);
-    return await this.customerRepository.save(customer);
   }
 
   /**

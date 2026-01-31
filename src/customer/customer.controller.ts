@@ -110,7 +110,7 @@ export class CustomerController {
   async updateCustomer(
     @Req() req: { user: { userId: string } },
     @Param('customerId') customerId: string,
-    @Query() payload: UpdateCustomerDto,
+    @Body() payload: UpdateCustomerDto,
   ) {
     const ownerId = this.getUserId(req);
     if (!ownerId) {

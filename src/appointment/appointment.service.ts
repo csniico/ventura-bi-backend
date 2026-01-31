@@ -8,15 +8,19 @@ import {
 } from '@nestjs/common';
 import { APPOINTMENT_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
-import { Appointment } from 'src/appointment/entities/appointment.entity';
+import {
+  Appointment,
+  AppointmentStatus,
+} from 'src/appointment/entities/appointment.entity';
 import { UserService } from 'src/user/user.service';
 import { BusinessService } from 'src/business/business.service';
-import { CreateAppointmentDto } from 'src/appointment/dto/create-appointment.dto';
 import { UpdateGoogleEvent } from 'src/appointment/dto/update-google-event.dto';
 import { User } from 'src/user/entities/user.entity';
 import { Business } from 'src/business/entities/business.entity';
-import { UpdateAppointmentDto } from 'src/appointment/dto/update-appointment.dto';
 import { DeleteAppointmentDto } from 'src/appointment/dto/delete-appointment.dto';
+import { CustomerService } from 'src/customer/customer.service';
+import { IUpdateAppointment } from './interfaces/update-appointment.interface';
+import { ICreateAppointment } from './create-appointment.interface';
 
 @Injectable()
 export class AppointmentService {
@@ -26,6 +30,7 @@ export class AppointmentService {
     private readonly appointmentRepository: Repository<Appointment>,
     private readonly userService: UserService,
     private readonly businessService: BusinessService,
+    private readonly customerService: CustomerService,
   ) {}
 
   private async _validateUserId(userId: string) {
@@ -103,6 +108,7 @@ export class AppointmentService {
   async findByUserId(userId: string) {
     const appointment = await this.appointmentRepository.find({
       where: { userId },
+      relations: ['customer'],
     });
     if (!appointment) {
       return new NotFoundException(
@@ -115,6 +121,7 @@ export class AppointmentService {
   async findByBusinessId(businessId: string) {
     const appointment = await this.appointmentRepository.find({
       where: { businessId },
+      relations: ['customer'],
     });
     if (!appointment) {
       throw new NotFoundException(
@@ -127,6 +134,7 @@ export class AppointmentService {
   async findByAppointmentId(appointmentId: string) {
     const appointment = await this.appointmentRepository.findOne({
       where: { id: appointmentId },
+      relations: ['customer'],
     });
     if (!appointment) {
       throw new NotFoundException(
@@ -136,21 +144,52 @@ export class AppointmentService {
     return appointment;
   }
 
-  async create(dto: CreateAppointmentDto) {
-    this.logger.log('Received DTO:', JSON.stringify(dto, null, 2));
-    this.logger.log('isRecurring:', dto.isRecurring);
-    this.logger.log(
-      'recurringSchedule:',
-      dto.recurringUntil,
-      dto.recurringFrequency,
-    );
-    const { userId, businessId } = dto;
+  async create(params: ICreateAppointment) {
+    const { userId, businessId } = params;
     await this.authorizeRequest(userId, businessId);
-    const appointment = this.appointmentRepository.create(dto);
-    this.logger.log(
-      'Created appointment:',
-      JSON.stringify(appointment, null, 2),
-    );
+    const payload: Partial<Appointment> = {
+      businessId: params.businessId,
+      userId: params.userId,
+      title: params.title,
+      startTime: new Date(params.startTime),
+      endTime: new Date(params.endTime),
+      isRecurring: params.isRecurring,
+      status: AppointmentStatus.SCHEDULED,
+    };
+    if (params.customerId) {
+      const customer = await this.customerService.findOne({
+        customerId: params.customerId,
+        ownerId: userId,
+        businessId: businessId,
+      });
+      if (!customer) {
+        throw new NotFoundException(
+          `Customer with id ${params.customerId} not found`,
+        );
+      }
+      payload.customerId = params.customerId;
+      payload.customer = customer;
+    }
+    if (params.description) {
+      payload.description = params.description;
+    }
+    if (params.notes) {
+      payload.notes = params.notes;
+    }
+    if (params.isRecurring) {
+      if (
+        params.recurringFrequency == undefined ||
+        params.recurringUntil == undefined
+      ) {
+        throw new BadRequestException(
+          'Both recurringFrequency and recurringUntil must be provided when isRecurring is true',
+        );
+      }
+      payload.recurringFrequency = params.recurringFrequency;
+      payload.recurringUntil = params.recurringUntil;
+    }
+    const appointment = this.appointmentRepository.create(payload);
+
     return await this.appointmentRepository.save(appointment);
   }
 
@@ -165,6 +204,7 @@ export class AppointmentService {
     await this.authorizeRequest(userId, businessId);
     const appointment = await this.appointmentRepository.findOne({
       where: { id: appointmentId },
+      relations: ['customer'],
     });
     if (!appointment) {
       throw new NotFoundException(
@@ -179,51 +219,49 @@ export class AppointmentService {
     return await this.appointmentRepository.save(appointment);
   }
 
-  async updateAppointment({
-    appointmentId,
-    partials,
-  }: {
-    appointmentId: string;
-    partials: UpdateAppointmentDto;
-  }) {
-    if (!appointmentId) {
-      throw new NotFoundException(
-        'Appointment with id ${appointmentId} not found',
-      );
-    }
-    this.logger.log({ partials });
-    if (!partials.userId || !partials.businessId || !partials.title) {
-      throw new BadRequestException(
-        'one of [userId, businessId, title] is required',
-      );
-    }
-    const { userId, businessId, title, startTime, endTime } = partials;
-    if (!userId || !businessId || !title || !startTime || !endTime) {
-      throw new BadRequestException('missing one or more required fields');
-    }
-    await this.authorizeRequest(userId, businessId);
-    const appointment = await this.appointmentRepository.findOne({
-      where: { id: appointmentId },
+  async update(params: IUpdateAppointment) {
+    await this.authorizeRequest(params.ownerId, params.businessId);
+    const appointment = await this.appointmentRepository.exists({
+      where: { id: params.appointmentId },
     });
     if (!appointment) {
       throw new NotFoundException(
-        `Appointment with id ${appointmentId} not found`,
+        `Appointment with id ${params.appointmentId} not found`,
       );
     }
-
-    // Update appointment with new values
-    Object.assign(appointment, partials);
-    await this.appointmentRepository.save(appointment);
-
-    const updatedAppointment = await this.appointmentRepository.findOne({
-      where: { id: appointmentId },
+    await this.appointmentRepository.update(params.appointmentId, {
+      title: params.title,
+      startTime: new Date(params.startTime),
+      endTime: new Date(params.endTime),
+      description: params.description,
+      notes: params.notes,
+      status: params.status,
+      isRecurring: params.isRecurring,
+      recurringFrequency: params.recurringFrequency,
+      recurringUntil: params.recurringUntil,
     });
-    if (!updatedAppointment) {
-      throw new NotFoundException(
-        'Appointment with id ${appointmentId} not found',
-      );
+    if (params.customerId != undefined) {
+      const customer = await this.customerService.findOne({
+        customerId: params.customerId,
+        ownerId: params.ownerId,
+        businessId: params.businessId,
+      });
+      await this.appointmentRepository.update(params.appointmentId, {
+        customerId: customer.id,
+      });
+    } else {
+      // Use query builder to set customerId to NULL
+      await this.appointmentRepository
+        .createQueryBuilder()
+        .update()
+        .set({ customerId: () => 'NULL' })
+        .where('id = :id', { id: params.appointmentId })
+        .execute();
     }
-    return updatedAppointment;
+    return await this.appointmentRepository.findOne({
+      where: { id: params.appointmentId },
+      relations: ['customer'],
+    });
   }
 
   async delete({
@@ -237,6 +275,7 @@ export class AppointmentService {
     await this.authorizeRequest(userId, businessId);
     const appointment = await this.appointmentRepository.findOne({
       where: { id: appointmentId },
+      relations: ['customer'],
     });
     if (!appointment) {
       throw new NotFoundException(
