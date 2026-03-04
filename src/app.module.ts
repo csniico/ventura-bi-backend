@@ -9,18 +9,25 @@ import { BusinessModule } from './business/business.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from 'src/mail/mail.module';
 import { BullModule } from '@nestjs/bullmq';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { StorageModule } from './storage/storage.module';
 import { CustomerModule } from './customer/customer.module';
 import { ResourceModule } from './resource/resource.module';
 import { OrderModule } from './order/order.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       expandVariables: true,
+    }),
+    EventEmitterModule.forRoot({
+      wildcard: true,
+      delimiter: '.',
+      maxListeners: 10,
     }),
     BullModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
@@ -47,6 +54,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     OrderModule,
     InvoiceModule,
     DashboardModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],
