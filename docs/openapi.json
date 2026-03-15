@@ -3,10 +3,52 @@
   "info": {
     "title": "Ventura Backend Service API",
     "description": "A comprehensive business management API for handling appointments, orders, invoices, customers, and more",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "contact": {
       "name": "Ventura API Support"
-    }
+    },
+    "x-changelog": [
+      {
+        "version": "1.2.0",
+        "date": "2026-03-15",
+        "changes": [
+          "Added /dashboard/summary endpoint with full analytics response schema",
+          "Added /audit/entity/{entity}/{entityId}, /audit/user/{userId}, /audit/actions endpoints",
+          "Added /customers/import endpoint for bulk customer import",
+          "Added AuditLog and DashboardSummary response schemas",
+          "Fixed Invoice schema: added invoiceType (STANDARD|PROFORMA|RECEIPT), customerName, customerEmail, customerPhone, paymentDate, issueDate fields",
+          "Fixed Order schema: added customerName, customerEmail, customerPhone customer snapshot fields",
+          "Fixed CreateInvoiceDto: added optional invoiceType field",
+          "Fixed CreateAppointmentDto: removed incorrect userId field, added optional customerId field",
+          "Fixed UpdateAppointmentDto: removed incorrect userId field from required, added customerId optional",
+          "Fixed /auth/resend-code request body: field is id (not email)",
+          "Fixed /auth/verify-code request body: added required shortToken field",
+          "Fixed /invoices/{id}/payment: paymentDate is optional not required",
+          "Added missing UpdateCustomerDto schema"
+        ]
+      },
+      {
+        "version": "1.1.0",
+        "date": "2026-01-10",
+        "changes": [
+          "Added invoice type support (STANDARD, PROFORMA, RECEIPT)",
+          "Added customer snapshot fields to orders and invoices (customerName, customerEmail, customerPhone)",
+          "Added customer import endpoint",
+          "Added audit resource module",
+          "Added dashboard analytics module",
+          "Added email duplication check in customer creation and update"
+        ]
+      },
+      {
+        "version": "1.0.0",
+        "date": "2025-11-01",
+        "changes": [
+          "Initial OpenAPI documentation",
+          "Auth, User, Business, Customer, Appointment, Order, Invoice, Resource endpoints",
+          "Mailer and Assets (image upload) endpoints"
+        ]
+      }
+    ]
   },
   "servers": [
     {
@@ -370,6 +412,19 @@
             "format": "uuid",
             "description": "Associated customer ID"
           },
+          "customerName": {
+            "type": "string",
+            "description": "Customer name snapshot at time of order creation"
+          },
+          "customerEmail": {
+            "type": "string",
+            "format": "email",
+            "description": "Customer email snapshot at time of order creation"
+          },
+          "customerPhone": {
+            "type": "string",
+            "description": "Customer phone snapshot at time of order creation"
+          },
           "invoiceId": {
             "type": "string",
             "format": "uuid",
@@ -475,6 +530,25 @@
             "format": "uuid",
             "description": "Associated customer ID"
           },
+          "customerName": {
+            "type": "string",
+            "description": "Customer name snapshot at time of invoice creation"
+          },
+          "customerEmail": {
+            "type": "string",
+            "format": "email",
+            "description": "Customer email snapshot at time of invoice creation"
+          },
+          "customerPhone": {
+            "type": "string",
+            "description": "Customer phone snapshot at time of invoice creation"
+          },
+          "invoiceType": {
+            "type": "string",
+            "enum": ["STANDARD", "PROFORMA", "RECEIPT"],
+            "default": "STANDARD",
+            "description": "Invoice type"
+          },
           "subtotal": {
             "type": "number",
             "format": "decimal",
@@ -545,10 +619,20 @@
             "enum": ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "CARD", "CHEQUE"],
             "description": "Payment method"
           },
+          "issueDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Invoice issue date"
+          },
           "dueDate": {
             "type": "string",
-            "format": "date",
+            "format": "date-time",
             "description": "Invoice due date"
+          },
+          "paymentDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date payment was received"
           },
           "notes": {
             "type": "string",
@@ -725,15 +809,15 @@
       "CreateAppointmentDto": {
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User ID for the appointment"
-          },
           "businessId": {
             "type": "string",
             "format": "uuid",
             "description": "Business ID for the appointment"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional customer ID to associate with the appointment"
           },
           "title": {
             "type": "string",
@@ -741,11 +825,13 @@
           },
           "startTime": {
             "type": "string",
-            "description": "Appointment start time"
+            "format": "date-time",
+            "description": "Appointment start time (ISO 8601)"
           },
           "endTime": {
             "type": "string",
-            "description": "Appointment end time"
+            "format": "date-time",
+            "description": "Appointment end time (ISO 8601)"
           },
           "description": {
             "type": "string",
@@ -770,7 +856,6 @@
           }
         },
         "required": [
-          "userId",
           "businessId",
           "title",
           "startTime",
@@ -781,15 +866,15 @@
       "UpdateAppointmentDto": {
         "type": "object",
         "properties": {
-          "userId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User ID for the appointment"
-          },
           "businessId": {
             "type": "string",
             "format": "uuid",
             "description": "Business ID for the appointment"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional customer ID to associate with the appointment"
           },
           "title": {
             "type": "string",
@@ -798,12 +883,12 @@
           "startTime": {
             "type": "string",
             "format": "date-time",
-            "description": "Appointment start time"
+            "description": "Appointment start time (ISO 8601)"
           },
           "endTime": {
             "type": "string",
             "format": "date-time",
-            "description": "Appointment end time"
+            "description": "Appointment end time (ISO 8601)"
           },
           "description": {
             "type": "string",
@@ -820,14 +905,14 @@
           "recurringFrequency": {
             "type": "string",
             "enum": ["daily", "monthly", "weekly", "yearly"],
-            "description": "Recurring frequency"
+            "description": "Recurring frequency (required if isRecurring is true)"
           },
           "recurringUntil": {
             "type": "string",
-            "description": "Recurring until date"
+            "description": "Recurring until date (required if isRecurring is true)"
           }
         },
-        "required": ["userId", "businessId"]
+        "required": ["businessId", "title", "startTime", "endTime", "isRecurring"]
       },
       "CreateBusinessDto": {
         "type": "object",
@@ -990,6 +1075,12 @@
             "type": "string",
             "format": "date",
             "description": "Invoice due date"
+          },
+          "invoiceType": {
+            "type": "string",
+            "enum": ["STANDARD", "PROFORMA", "RECEIPT"],
+            "default": "STANDARD",
+            "description": "Invoice type (optional, defaults to STANDARD)"
           },
           "notes": {
             "type": "string",
@@ -1262,6 +1353,273 @@
             }
           }
         }
+      },
+      "UpdateCustomerDto": {
+        "type": "object",
+        "description": "All fields are optional for partial updates",
+        "properties": {
+          "businessId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Business ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Customer name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Customer email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Customer phone"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Customer notes"
+          }
+        }
+      },
+      "ImportCustomerItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Customer name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Customer email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Customer phone"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Customer notes"
+          }
+        },
+        "required": ["name"]
+      },
+      "ImportCustomersDto": {
+        "type": "object",
+        "properties": {
+          "businessId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Business ID"
+          },
+          "customers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportCustomerItemDto"
+            },
+            "description": "Array of customers to import"
+          }
+        },
+        "required": ["businessId", "customers"]
+      },
+      "AuditLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique audit log identifier"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "CREATE", "READ", "UPDATE", "DELETE",
+              "LOGIN", "LOGOUT", "EXPORT", "IMPORT",
+              "RESTORE", "ARCHIVE", "SEND", "APPROVE",
+              "REJECT", "CANCEL"
+            ],
+            "description": "Action performed"
+          },
+          "entity": {
+            "type": "string",
+            "enum": [
+              "USER", "BUSINESS", "APPOINTMENT", "CUSTOMER",
+              "ORDER", "ORDER_ITEM", "INVOICE", "PRODUCT",
+              "SERVICE", "MAIL", "RESOURCE", "STORAGE", "AUTH"
+            ],
+            "description": "Entity type affected"
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the affected entity"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the user who performed the action"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional context data (JSON)",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the audit event"
+          }
+        },
+        "required": ["id", "action", "entity", "createdAt"]
+      },
+      "DashboardSummary": {
+        "type": "object",
+        "description": "Business dashboard analytics summary",
+        "properties": {
+          "financial": {
+            "type": "object",
+            "properties": {
+              "totalRevenue": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "number", "format": "decimal" },
+                  "trend": {
+                    "type": "object",
+                    "properties": {
+                      "percentage": { "type": "number" },
+                      "direction": { "type": "string", "enum": ["up", "down"] }
+                    }
+                  }
+                }
+              },
+              "netRevenue": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "number", "format": "decimal" },
+                  "afterTaxes": { "type": "boolean" }
+                }
+              },
+              "totalTax": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "number", "format": "decimal" },
+                  "breakdown": {
+                    "type": "object",
+                    "properties": {
+                      "vat": {
+                        "type": "object",
+                        "properties": {
+                          "rate": { "type": "number", "example": 0.15 },
+                          "amount": { "type": "number", "format": "decimal" }
+                        }
+                      },
+                      "nhil": {
+                        "type": "object",
+                        "properties": {
+                          "rate": { "type": "number", "example": 0.025 },
+                          "amount": { "type": "number", "format": "decimal" }
+                        }
+                      },
+                      "getfund": {
+                        "type": "object",
+                        "properties": {
+                          "rate": { "type": "number", "example": 0.025 },
+                          "amount": { "type": "number", "format": "decimal" }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "unpaidInvoices": {
+                "type": "object",
+                "description": "Summary of unpaid invoices"
+              }
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "totalOrders": { "type": "integer" },
+              "totalCustomers": { "type": "integer" },
+              "totalProducts": { "type": "integer" },
+              "totalInvoices": { "type": "integer" }
+            }
+          },
+          "alerts": {
+            "type": "object",
+            "properties": {
+              "pendingOrders": {
+                "type": "object",
+                "properties": {
+                  "count": { "type": "integer" },
+                  "items": { "type": "array", "items": { "type": "object" } }
+                }
+              },
+              "outOfStockProducts": {
+                "type": "object",
+                "properties": {
+                  "count": { "type": "integer" },
+                  "items": { "type": "array", "items": { "type": "object" } }
+                }
+              },
+              "overdueInvoices": {
+                "type": "object",
+                "properties": {
+                  "count": { "type": "integer" },
+                  "items": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          },
+          "topPerformers": {
+            "type": "object",
+            "properties": {
+              "topSellingProducts": { "type": "array", "items": { "type": "object" } },
+              "topCustomers": { "type": "array", "items": { "type": "object" } }
+            }
+          },
+          "recentActivity": {
+            "type": "array",
+            "description": "Recent business activity timeline (up to 10 items)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "type": {
+                  "type": "string",
+                  "enum": ["new_order", "invoice_overdue", "product_out_of_stock", "order_cancelled"]
+                },
+                "title": { "type": "string" },
+                "description": { "type": "string" },
+                "metadata": { "type": "object", "additionalProperties": true },
+                "timestamp": { "type": "string", "format": "date-time" }
+              }
+            }
+          },
+          "cancellations": {
+            "type": "object",
+            "properties": {
+              "cancelledOrders": {
+                "type": "object",
+                "properties": {
+                  "total": { "type": "integer" },
+                  "totalRevenueLost": { "type": "number", "format": "decimal" },
+                  "byReason": { "type": "object", "additionalProperties": true }
+                }
+              },
+              "cancelledInvoices": {
+                "type": "object",
+                "properties": {
+                  "total": { "type": "integer" },
+                  "totalRevenueLost": { "type": "number", "format": "decimal" },
+                  "mappings": { "type": "object", "additionalProperties": true }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -1462,7 +1820,7 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Verify email verification code",
-        "description": "Verify the email verification code sent to user",
+        "description": "Verify the email verification code sent to user. Requires shortToken from signup response, the user's email, and the verification code.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1470,17 +1828,21 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "code": {
+                  "shortToken": {
                     "type": "string",
-                    "description": "Verification code"
+                    "description": "Short token returned from the signup response"
                   },
                   "email": {
                     "type": "string",
                     "format": "email",
                     "description": "User email"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "Verification code sent to user's email"
                   }
                 },
-                "required": ["code", "email"]
+                "required": ["shortToken", "email", "code"]
               }
             }
           }
@@ -1519,7 +1881,7 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Resend verification code",
-        "description": "Resend email verification code",
+        "description": "Resend email verification code. Send the user ID returned from signup.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1527,13 +1889,12 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "email": {
+                  "id": {
                     "type": "string",
-                    "format": "email",
-                    "description": "User email"
+                    "description": "User ID (returned from the signup response)"
                   }
                 },
-                "required": ["email"]
+                "required": ["id"]
               }
             }
           }
@@ -3210,7 +3571,7 @@
                     "description": "Payment date"
                   }
                 },
-                "required": ["amountPaid", "paymentMethod", "paymentDate"]
+                "required": ["amountPaid", "paymentMethod"]
               }
             }
           }
@@ -4029,6 +4390,238 @@
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/import": {
+      "post": {
+        "tags": ["Customers"],
+        "summary": "Bulk import customers",
+        "description": "Import multiple customers for a business at once",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportCustomersDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Customers imported successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Customers imported successfully" },
+                    "count": { "type": "integer", "description": "Number of customers imported" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/summary": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get dashboard summary",
+        "description": "Returns a comprehensive analytics summary for a business including financials, stats, alerts, top performers, recent activity, and cancellations. Rate limiting is disabled for this endpoint.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Business ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard summary retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit/entity/{entity}/{entityId}": {
+      "get": {
+        "tags": ["Audit"],
+        "summary": "Get audit logs for a specific entity record",
+        "description": "Returns all audit logs for a specific entity instance (e.g. a specific order, invoice, or customer)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "USER", "BUSINESS", "APPOINTMENT", "CUSTOMER",
+                "ORDER", "ORDER_ITEM", "INVOICE", "PRODUCT",
+                "SERVICE", "MAIL", "RESOURCE", "STORAGE", "AUTH"
+              ]
+            },
+            "description": "Entity type"
+          },
+          {
+            "name": "entityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Entity record ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AuditLog" }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit/user/{userId}": {
+      "get": {
+        "tags": ["Audit"],
+        "summary": "Get audit logs for a specific user",
+        "description": "Returns all audit logs performed by or on a specific user",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AuditLog" }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audit/actions": {
+      "get": {
+        "tags": ["Audit"],
+        "summary": "Get audit logs by action type",
+        "description": "Returns all audit logs for a specific action type",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CREATE", "READ", "UPDATE", "DELETE",
+                "LOGIN", "LOGOUT", "EXPORT", "IMPORT",
+                "RESTORE", "ARCHIVE", "SEND", "APPROVE",
+                "REJECT", "CANCEL"
+              ]
+            },
+            "description": "Action type to filter by"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AuditLog" }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
               }
             }
           }
