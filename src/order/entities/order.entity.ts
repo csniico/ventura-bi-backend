@@ -13,7 +13,6 @@ import {
 import { OrderItem } from './order-item.entity';
 import { Invoice } from 'src/invoice/entities/invoice.entity';
 import { Business } from 'src/business/entities/business.entity';
-import { Customer } from 'src/customer/entities/customer.entity';
 
 export enum OrderStatus {
   PENDING = 'pending',
@@ -35,6 +34,15 @@ export class Order {
   @Column('uuid', { nullable: true })
   customerId: string;
 
+  @Column({ nullable: true })
+  customerName: string;
+
+  @Column({ nullable: true })
+  customerEmail: string;
+
+  @Column({ nullable: true })
+  customerPhone: string;
+
   @Column('uuid', { nullable: true })
   invoiceId: string;
 
@@ -48,10 +56,6 @@ export class Order {
   @ManyToOne(() => Business)
   @JoinColumn({ name: 'businessId' })
   business: Business;
-
-  @ManyToOne(() => Customer)
-  @JoinColumn({ name: 'customerId' })
-  customer: Customer;
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items: OrderItem[];

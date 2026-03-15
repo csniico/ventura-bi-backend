@@ -18,6 +18,8 @@ import type { ConfigType } from '@nestjs/config';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import refreshJwtConfig from './config/refresh-jwt.config';
 import * as argon2 from 'argon2';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AuthLoginEvent, AuthLogoutEvent } from 'src/audit/events/auth-events';
 
 @Injectable()
 export class AuthService {
@@ -28,6 +30,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
+    private readonly eventEmitter: EventEmitter2,
     @Inject(refreshJwtConfig.KEY)
     private refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
   ) {
@@ -70,7 +73,15 @@ export class AuthService {
     return await this.userService.handleUserSignIn({ email, password });
   }
 
-  async login({ userId, res }: { userId: string; res: Response }) {
+  async login({
+    userId,
+    res,
+    email,
+  }: {
+    userId: string;
+    res: Response;
+    email?: string;
+  }) {
     const { access_token, refresh_token } = await this.generateTokens(userId);
 
     const hashedRefreshToken = await argon2.hash(refresh_token);
@@ -100,6 +111,13 @@ export class AuthService {
 
     res.cookie('access_token', access_token, cookieOptions);
     res.cookie('refresh_token', refresh_token, cookieOptions);
+
+    this.eventEmitter.emit('auth.login', {
+      userId,
+      email: email ?? '',
+      success: true,
+      timestamp: new Date(),
+    } as AuthLoginEvent);
   }
 
   async signup({
@@ -153,6 +171,12 @@ export class AuthService {
       userId,
       hashedRefreshToken: null,
     });
+
+    this.eventEmitter.emit('auth.logout', {
+      userId,
+      email: '',
+      timestamp: new Date(),
+    } as AuthLogoutEvent);
   }
 
   async confirmEmailAndSendVerificationCode(email: string) {

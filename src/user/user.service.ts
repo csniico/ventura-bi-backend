@@ -12,6 +12,16 @@ import { USER_REPOSITORY } from 'src/constants';
 import { QueryFailedError, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import * as argon2 from 'argon2';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  UserCreatedEvent,
+  UserUpdatedEvent,
+  UserDeletedEvent,
+} from 'src/audit/events/user-events';
+import {
+  AuthPasswordChangeEvent,
+  AuthPasswordResetEvent,
+} from 'src/audit/events/auth-events';
 
 type CreateUserResult = {
   status: 'NEW_USER' | 'EXISTING_USER' | 'EXISTING_GOOGLE_USER';
@@ -24,6 +34,7 @@ export class UserService {
   constructor(
     @Inject(USER_REPOSITORY)
     private userRepository: Repository<User>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private async comparePassword({
@@ -105,10 +116,17 @@ export class UserService {
       newUser.password = hashedPassword;
       newUser.isSystem = true;
     }
-    return {
-      status: 'NEW_USER',
-      user: await this.userRepository.save(newUser),
-    };
+    const savedUser = await this.userRepository.save(newUser);
+
+    this.eventEmitter.emit('user.created', {
+      userId: savedUser.id,
+      email: savedUser.email,
+      firstName: savedUser.firstName,
+      lastName: savedUser.lastName,
+      timestamp: new Date(),
+    } as UserCreatedEvent);
+
+    return { status: 'NEW_USER', user: savedUser };
   }
 
   private async getUserByEmail(email: string) {
@@ -334,6 +352,19 @@ export class UserService {
         user.avatarUrl = avatarUrl;
       }
       await this.userRepository.save(user);
+
+      const updatedFields = ['firstName'];
+      if (lastName !== undefined) updatedFields.push('lastName');
+      if (avatarUrl !== undefined) updatedFields.push('avatarUrl');
+
+      this.eventEmitter.emit('user.updated', {
+        userId,
+        email: user.email,
+        updatedFields,
+        updatedBy: userId,
+        timestamp: new Date(),
+      } as UserUpdatedEvent);
+
       return user;
     } catch (error) {
       if (error instanceof QueryFailedError) {
@@ -376,6 +407,13 @@ export class UserService {
       }
       user.password = await this.hashPassword(newPassword);
       await this.userRepository.save(user);
+
+      this.eventEmitter.emit('auth.password.change', {
+        userId,
+        email: user.email,
+        timestamp: new Date(),
+      } as AuthPasswordChangeEvent);
+
       return user;
     } catch (error) {
       if (error instanceof QueryFailedError) {
@@ -403,6 +441,13 @@ export class UserService {
       }
       user.password = await this.hashPassword(newPassword);
       await this.userRepository.save(user);
+
+      this.eventEmitter.emit('auth.password.reset', {
+        userId,
+        email: user.email,
+        timestamp: new Date(),
+      } as AuthPasswordResetEvent);
+
       return user;
     } catch (error) {
       if (error instanceof QueryFailedError) {
@@ -420,7 +465,16 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('User not found.');
     }
-    return await this.userRepository.remove(user);
+    await this.userRepository.remove(user);
+
+    this.eventEmitter.emit('user.deleted', {
+      userId,
+      email: user.email,
+      deletedBy: userId,
+      timestamp: new Date(),
+    } as UserDeletedEvent);
+
+    return user;
   }
 
   async updateUserRefreshToken({

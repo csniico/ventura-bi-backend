@@ -10,7 +10,6 @@ import {
   BeforeInsert,
 } from 'typeorm';
 import { Business } from 'src/business/entities/business.entity';
-import { Customer } from 'src/customer/entities/customer.entity';
 import { Order } from 'src/order/entities/order.entity';
 import { nanoid } from 'nanoid';
 
@@ -34,7 +33,7 @@ export enum PaymentMethod {
 export enum InvoiceType {
   STANDARD = 'STANDARD',
   PROFORMA = 'PROFORMA',
-  RECIEPT = 'RECIEPT',
+  RECEIPT = 'RECEIPT',
 }
 
 @Entity('invoices')
@@ -48,8 +47,17 @@ export class Invoice {
   @Column({ type: 'uuid' })
   businessId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   customerId: string;
+
+  @Column({ nullable: true })
+  customerName: string;
+
+  @Column({ nullable: true })
+  customerEmail: string;
+
+  @Column({ nullable: true })
+  customerPhone: string;
 
   @Column({
     type: 'enum',
@@ -62,10 +70,6 @@ export class Invoice {
   @ManyToOne(() => Business, { nullable: false })
   @JoinColumn({ name: 'businessId' })
   business: Business;
-
-  @ManyToOne(() => Customer, { nullable: false })
-  @JoinColumn({ name: 'customerId' })
-  customer: Customer;
 
   @OneToMany(() => Order, (order) => order.invoice)
   orders: Order[];

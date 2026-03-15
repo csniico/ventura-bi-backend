@@ -37,6 +37,12 @@ interface IUnpaidInvoicesRaw {
   count: string;
 }
 import { OrderStatus } from 'src/order/entities/order.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  InvoiceCreatedEvent,
+  InvoicePaidEvent,
+  InvoiceCancelledEvent,
+} from 'src/audit/events/invoice-events';
 
 const VAT_RATE = 0.15; // 15%
 const NHIL_RATE = 0.025; // 2.5%
@@ -52,6 +58,7 @@ export class InvoiceService {
     private readonly businessService: BusinessService,
     private readonly customerService: CustomerService,
     private readonly orderService: OrderService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private async verifyBusinessOwnership(params: IVerifyOwnershipParams) {
@@ -134,9 +141,10 @@ export class InvoiceService {
         });
       }
 
-      // Check if order is completed if invoice is not PROFORMA
+      // Check if order is completed if invoice is not PROFORMA or RECEIPT
       if (
         params.invoiceType !== InvoiceType.PROFORMA &&
+        params.invoiceType !== InvoiceType.RECEIPT &&
         order.status !== OrderStatus.COMPLETED
       ) {
         validationErrors.push({
@@ -170,10 +178,20 @@ export class InvoiceService {
     const totalTax = vatAmount + nhilAmount + getfundAmount;
     const totalAmount = subtotal + totalTax;
 
+    // Fetch customer snapshot
+    const customer = await this.customerService.findOne({
+      customerId: params.customerId,
+      ownerId: params.ownerId,
+      businessId: params.businessId,
+    });
+
     // Create invoice
     const newInvoice = this.invoiceRepository.create({
       businessId: params.businessId,
       customerId: params.customerId,
+      customerName: customer?.name,
+      customerEmail: customer?.email,
+      customerPhone: customer?.phone,
       subtotal,
       vatRate: VAT_RATE,
       vatAmount,
@@ -208,10 +226,17 @@ export class InvoiceService {
         'orders.items',
         'orders.items.product',
         'orders.items.service',
-        'customer',
         'business',
       ],
     });
+
+    this.eventEmitter.emit('invoice.created', {
+      invoiceId: invoice.id,
+      customerId: params.customerId,
+      totalAmount: totalAmount,
+      createdBy: params.ownerId,
+      timestamp: new Date(),
+    } as InvoiceCreatedEvent);
 
     return completeInvoice;
   }
@@ -232,7 +257,6 @@ export class InvoiceService {
       .leftJoinAndSelect('orders.items', 'items')
       .leftJoinAndSelect('items.product', 'product')
       .leftJoinAndSelect('items.service', 'service')
-      .leftJoinAndSelect('invoice.customer', 'customer')
       .where('invoice.businessId = :businessId', {
         businessId: params.businessId,
       });
@@ -279,7 +303,6 @@ export class InvoiceService {
         'orders.items',
         'orders.items.product',
         'orders.items.service',
-        'customer',
         'business',
       ],
     });
@@ -373,7 +396,20 @@ export class InvoiceService {
       invoice.status = InvoiceStatus.PARTIALLY_PAID;
     }
 
-    return await this.invoiceRepository.save(invoice);
+    const savedInvoice = await this.invoiceRepository.save(invoice);
+
+    if (savedInvoice.status === InvoiceStatus.PAID) {
+      this.eventEmitter.emit('invoice.paid', {
+        invoiceId: savedInvoice.id,
+        customerId: savedInvoice.customerId,
+        amountPaid: totalAmountPaid,
+        paymentMethod: params.paymentMethod,
+        paidBy: params.ownerId,
+        timestamp: new Date(),
+      } as InvoicePaidEvent);
+    }
+
+    return savedInvoice;
   }
 
   async updateInvoiceStatus(params: IUpdateInvoiceStatusParams) {
@@ -394,7 +430,18 @@ export class InvoiceService {
     }
 
     invoice.status = params.status;
-    return await this.invoiceRepository.save(invoice);
+    const saved = await this.invoiceRepository.save(invoice);
+
+    if (saved.status === InvoiceStatus.CANCELLED) {
+      this.eventEmitter.emit('invoice.cancelled', {
+        invoiceId: saved.id,
+        customerId: saved.customerId,
+        cancelledBy: params.ownerId,
+        timestamp: new Date(),
+      } as InvoiceCancelledEvent);
+    }
+
+    return saved;
   }
 
   /**
@@ -478,7 +525,6 @@ export class InvoiceService {
 
     const overdueInvoices = await this.invoiceRepository
       .createQueryBuilder('invoice')
-      .leftJoinAndSelect('invoice.customer', 'customer')
       .where('invoice.businessId = :businessId', {
         businessId: params.businessId,
       })
@@ -501,7 +547,7 @@ export class InvoiceService {
       return {
         id: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
-        customerName: invoice.customer?.name || 'Unknown',
+        customerName: invoice.customerName || 'Unknown',
         amount: Number(invoice.totalAmount) - Number(invoice.amountPaid),
         dueDate: invoice.dueDate,
         daysOverdue,
@@ -520,7 +566,6 @@ export class InvoiceService {
 
     const cancelledInvoices = await this.invoiceRepository
       .createQueryBuilder('invoice')
-      .leftJoinAndSelect('invoice.customer', 'customer')
       .leftJoinAndSelect('invoice.orders', 'order')
       .leftJoinAndSelect('order.items', 'items')
       .where('invoice.businessId = :businessId', {
@@ -551,7 +596,7 @@ export class InvoiceService {
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
         customerId: invoice.customerId,
-        customerName: invoice.customer?.name || 'Unknown',
+        customerName: invoice.customerName || 'Unknown',
         orderId: firstOrder?.id || null,
         orderNumber: firstOrder?.orderNumber || null,
         products,
