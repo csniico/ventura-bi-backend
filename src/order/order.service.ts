@@ -24,6 +24,7 @@ import {
 } from './interfaces/order.interfaces';
 import { IOrderAnalyticsParams } from './interfaces/order-analytics.interfaces';
 import { BusinessService } from 'src/business/business.service';
+import { CustomerService } from 'src/customer/customer.service';
 import { IVerifyOwnershipParams } from 'src/customer/interfaces/customer.interfaces';
 import { ResourceService } from 'src/resource/resource.service';
 
@@ -36,6 +37,7 @@ export class OrderService {
     @Inject(ORDER_ITEM_REPOSITORY)
     private orderItemRepository: Repository<OrderItem>,
     private readonly businessService: BusinessService,
+    private readonly customerService: CustomerService,
     private readonly resourceService: ResourceService,
   ) {}
 
@@ -223,9 +225,29 @@ export class OrderService {
       0,
     );
 
+    let customerName: string | undefined;
+    let customerEmail: string | undefined;
+    let customerPhone: string | undefined;
+
+    if (params.customerId) {
+      const customer = await this.customerService.findOne({
+        customerId: params.customerId,
+        ownerId: params.ownerId,
+        businessId: params.businessId,
+      });
+      if (customer) {
+        customerName = customer.name;
+        customerEmail = customer.email;
+        customerPhone = customer.phone;
+      }
+    }
+
     const newOrder = this.orderRepository.create({
       businessId: params.businessId,
       customerId: params.customerId,
+      customerName,
+      customerEmail,
+      customerPhone,
       totalAmount: totalAmount,
       items: orderItems,
       status: OrderStatus.PENDING,
@@ -267,7 +289,6 @@ export class OrderService {
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('items.product', 'product')
       .leftJoinAndSelect('items.service', 'service')
-      .leftJoinAndSelect('order.customer', 'customer')
       .where('order.businessId = :businessId', {
         businessId: params.businessId,
       });
@@ -309,7 +330,7 @@ export class OrderService {
 
     const order = await this.orderRepository.findOne({
       where: { id: params.orderId, businessId: params.businessId },
-      relations: ['items', 'items.product', 'items.service', 'customer'],
+      relations: ['items', 'items.product', 'items.service'],
     });
 
     if (!order) {
@@ -362,14 +383,13 @@ export class OrderService {
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('items.product', 'product')
       .leftJoinAndSelect('items.service', 'service')
-      .leftJoinAndSelect('order.customer', 'customer')
       .where('order.businessId = :businessId', {
         businessId: params.businessId,
       });
 
     // Search by order number or customer name
     queryBuilder.andWhere(
-      '(order.orderNumber ILIKE :searchQuery OR customer.name ILIKE :searchQuery)',
+      '(order.orderNumber ILIKE :searchQuery OR order.customerName ILIKE :searchQuery)',
       {
         searchQuery: `%${params.searchQuery}%`,
       },
@@ -626,7 +646,6 @@ export class OrderService {
 
     const orders = await this.orderRepository.find({
       where: { businessId: params.businessId, status: OrderStatus.PENDING },
-      relations: ['customer'],
       order: { createdAt: 'DESC' },
       take: limit,
     });
@@ -634,7 +653,7 @@ export class OrderService {
     return orders.map((order) => ({
       id: order.id,
       orderNumber: order.orderNumber,
-      customerName: order.customer?.name || 'Guest',
+      customerName: order.customerName || 'Guest',
       amount: Number(order.totalAmount),
       createdAt: order.createdAt,
     }));
@@ -651,7 +670,7 @@ export class OrderService {
 
     const cancelledOrders = await this.orderRepository.find({
       where: { businessId: params.businessId, status: OrderStatus.CANCELLED },
-      relations: ['customer', 'invoice', 'items'],
+      relations: ['invoice', 'items'],
     });
 
     const total = cancelledOrders.length;
@@ -681,7 +700,7 @@ export class OrderService {
       orderId: order.id,
       orderNumber: order.orderNumber,
       customerId: order.customerId,
-      customerName: order.customer?.name || null,
+      customerName: order.customerName || null,
       invoiceId: order.invoiceId,
       invoiceNumber: order.invoice?.invoiceNumber || null,
       products: order.items.map((item) => ({

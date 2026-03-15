@@ -170,10 +170,18 @@ export class InvoiceService {
     const totalTax = vatAmount + nhilAmount + getfundAmount;
     const totalAmount = subtotal + totalTax;
 
+    // Fetch customer snapshot
+    const customer = await this.customerService.findOne({
+      customerId: params.customerId,
+    });
+
     // Create invoice
     const newInvoice = this.invoiceRepository.create({
       businessId: params.businessId,
       customerId: params.customerId,
+      customerName: customer?.name,
+      customerEmail: customer?.email,
+      customerPhone: customer?.phone,
       subtotal,
       vatRate: VAT_RATE,
       vatAmount,
@@ -208,7 +216,6 @@ export class InvoiceService {
         'orders.items',
         'orders.items.product',
         'orders.items.service',
-        'customer',
         'business',
       ],
     });
@@ -232,7 +239,6 @@ export class InvoiceService {
       .leftJoinAndSelect('orders.items', 'items')
       .leftJoinAndSelect('items.product', 'product')
       .leftJoinAndSelect('items.service', 'service')
-      .leftJoinAndSelect('invoice.customer', 'customer')
       .where('invoice.businessId = :businessId', {
         businessId: params.businessId,
       });
@@ -279,7 +285,6 @@ export class InvoiceService {
         'orders.items',
         'orders.items.product',
         'orders.items.service',
-        'customer',
         'business',
       ],
     });
@@ -478,7 +483,6 @@ export class InvoiceService {
 
     const overdueInvoices = await this.invoiceRepository
       .createQueryBuilder('invoice')
-      .leftJoinAndSelect('invoice.customer', 'customer')
       .where('invoice.businessId = :businessId', {
         businessId: params.businessId,
       })
@@ -501,7 +505,7 @@ export class InvoiceService {
       return {
         id: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
-        customerName: invoice.customer?.name || 'Unknown',
+        customerName: invoice.customerName || 'Unknown',
         amount: Number(invoice.totalAmount) - Number(invoice.amountPaid),
         dueDate: invoice.dueDate,
         daysOverdue,
@@ -520,7 +524,6 @@ export class InvoiceService {
 
     const cancelledInvoices = await this.invoiceRepository
       .createQueryBuilder('invoice')
-      .leftJoinAndSelect('invoice.customer', 'customer')
       .leftJoinAndSelect('invoice.orders', 'order')
       .leftJoinAndSelect('order.items', 'items')
       .where('invoice.businessId = :businessId', {
@@ -551,7 +554,7 @@ export class InvoiceService {
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
         customerId: invoice.customerId,
-        customerName: invoice.customer?.name || 'Unknown',
+        customerName: invoice.customerName || 'Unknown',
         orderId: firstOrder?.id || null,
         orderNumber: firstOrder?.orderNumber || null,
         products,
