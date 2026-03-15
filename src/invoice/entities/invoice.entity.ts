@@ -33,7 +33,7 @@ export enum PaymentMethod {
 export enum InvoiceType {
   STANDARD = 'STANDARD',
   PROFORMA = 'PROFORMA',
-  RECIEPT = 'RECIEPT',
+  RECEIPT = 'RECEIPT',
 }
 
 @Entity('invoices')

@@ -5,7 +5,7 @@ export class UpdateInvoiceModule1768647692686 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TYPE "public"."invoices_invoicetype_enum" AS ENUM('STANDARD', 'PROFORMA', 'RECIEPT')`,
+      `CREATE TYPE "public"."invoices_invoicetype_enum" AS ENUM('STANDARD', 'PROFORMA', 'RECEIPT')`,
     );
     await queryRunner.query(
       `ALTER TABLE "invoices" ADD "invoiceType" "public"."invoices_invoicetype_enum" NOT NULL DEFAULT 'STANDARD'`,
