@@ -101,7 +101,7 @@
   },
   "lint-staged": {
     "*.ts": [
-      "eslint --cache --fix",
+      "eslint --cache --fix --no-warn-ignored",
       "prettier --write"
     ]
   }
