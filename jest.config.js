@@ -8,8 +8,9 @@ module.exports = {
   coverageDirectory: '../coverage',
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/$1',
+    '^nanoid$': '<rootDir>/__mocks__/nanoid.js',
   },
-  transformIgnorePatterns: ['node_modules/(?!(nanoid|@nestjs)/)'],
+  transformIgnorePatterns: ['node_modules/'],
   globals: {
     'ts-jest': {
       isolatedModules: true,
