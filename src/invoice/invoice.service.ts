@@ -141,9 +141,10 @@ export class InvoiceService {
         });
       }
 
-      // Check if order is completed if invoice is not PROFORMA
+      // Check if order is completed if invoice is not PROFORMA or RECEIPT
       if (
         params.invoiceType !== InvoiceType.PROFORMA &&
+        params.invoiceType !== InvoiceType.RECEIPT &&
         order.status !== OrderStatus.COMPLETED
       ) {
         validationErrors.push({
