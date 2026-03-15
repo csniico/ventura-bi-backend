@@ -27,6 +27,13 @@ import { BusinessService } from 'src/business/business.service';
 import { CustomerService } from 'src/customer/customer.service';
 import { IVerifyOwnershipParams } from 'src/customer/interfaces/customer.interfaces';
 import { ResourceService } from 'src/resource/resource.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  OrderCreatedEvent,
+  OrderStatusChangedEvent,
+  OrderCancelledEvent,
+  OrderCompletedEvent,
+} from 'src/audit/events/order-events';
 
 @Injectable()
 export class OrderService {
@@ -39,6 +46,7 @@ export class OrderService {
     private readonly businessService: BusinessService,
     private readonly customerService: CustomerService,
     private readonly resourceService: ResourceService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private async verifyBusinessOwnership(params: IVerifyOwnershipParams) {
@@ -253,6 +261,15 @@ export class OrderService {
       status: OrderStatus.PENDING,
     });
     const order = await this.orderRepository.save(newOrder);
+
+    this.eventEmitter.emit('order.created', {
+      orderId: order.id,
+      customerId: order.customerId,
+      totalAmount: Number(order.totalAmount),
+      createdBy: params.ownerId,
+      timestamp: new Date(),
+    } as OrderCreatedEvent);
+
     return order;
   }
 
@@ -270,8 +287,37 @@ export class OrderService {
       throw new NotFoundException(`Order with ID ${params.orderId} not found.`);
     }
 
+    const oldStatus = order.status;
     order.status = params.status as OrderStatus;
-    return await this.orderRepository.save(order);
+    const saved = await this.orderRepository.save(order);
+
+    this.eventEmitter.emit('order.status.changed', {
+      orderId: order.id,
+      customerId: order.customerId,
+      oldStatus,
+      newStatus: order.status,
+      changedBy: params.ownerId,
+      timestamp: new Date(),
+    } as OrderStatusChangedEvent);
+
+    if (order.status === OrderStatus.CANCELLED) {
+      this.eventEmitter.emit('order.cancelled', {
+        orderId: order.id,
+        customerId: order.customerId,
+        cancelledBy: params.ownerId,
+        timestamp: new Date(),
+      } as OrderCancelledEvent);
+    } else if (order.status === OrderStatus.COMPLETED) {
+      this.eventEmitter.emit('order.completed', {
+        orderId: order.id,
+        customerId: order.customerId,
+        totalAmount: Number(order.totalAmount),
+        completedBy: params.ownerId,
+        timestamp: new Date(),
+      } as OrderCompletedEvent);
+    }
+
+    return saved;
   }
 
   async getOrders(params: IGetOrdersParams) {

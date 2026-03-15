@@ -22,6 +22,12 @@ import {
   IVerifyOwnershipParams,
 } from './interfaces/customer.interfaces';
 import { ICustomerAnalyticsParams } from './interfaces/customer-analytics.interfaces';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  CustomerCreatedEvent,
+  CustomerUpdatedEvent,
+  CustomerDeletedEvent,
+} from 'src/audit/events/customer-events';
 
 interface ITopCustomerRaw {
   id: string;
@@ -41,6 +47,7 @@ export class CustomerService {
     private readonly customerRepository: Repository<Customer>,
     @Inject()
     private readonly businessService: BusinessService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -168,7 +175,19 @@ export class CustomerService {
       notes: params.notes,
     });
 
-    return await this.customerRepository.save(new_customer);
+    const saved = await this.customerRepository.save(new_customer);
+
+    this.eventEmitter.emit('customer.created', {
+      customerId: saved.id,
+      businessId: saved.businessId,
+      name: saved.name,
+      email: saved.email,
+      phone: saved.phone,
+      createdBy: params.ownerId,
+      timestamp: new Date(),
+    } as CustomerCreatedEvent);
+
+    return saved;
   }
 
   /**
@@ -201,6 +220,19 @@ export class CustomerService {
       phone: params.payload.phone,
       notes: params.payload.notes,
     });
+
+    const updatedFields = Object.keys(params.payload).filter(
+      (k) => params.payload[k as keyof typeof params.payload] !== undefined,
+    );
+
+    this.eventEmitter.emit('customer.updated', {
+      customerId: params.customerId,
+      businessId: params.payload.businessId ?? '',
+      updatedFields,
+      updatedBy: params.ownerId,
+      timestamp: new Date(),
+    } as CustomerUpdatedEvent);
+
     return await this.findOne({
       customerId: params.customerId,
       ownerId: params.ownerId,
@@ -220,6 +252,13 @@ export class CustomerService {
       businessId: params.businessId,
     });
     await this.customerRepository.remove(customer);
+
+    this.eventEmitter.emit('customer.deleted', {
+      customerId: params.customerId,
+      businessId: params.businessId,
+      deletedBy: params.ownerId,
+      timestamp: new Date(),
+    } as CustomerDeletedEvent);
   }
 
   /**

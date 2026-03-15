@@ -11,6 +11,7 @@ import {
   UserAuditService,
   OrderAuditService,
   InvoiceAuditService,
+  CustomerAuditService,
 } from './services';
 
 @Module({
@@ -25,6 +26,7 @@ import {
     UserAuditService,
     OrderAuditService,
     InvoiceAuditService,
+    CustomerAuditService,
   ],
   exports: [AuditService, AuditBaseService],
 })

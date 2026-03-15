@@ -37,6 +37,12 @@ interface IUnpaidInvoicesRaw {
   count: string;
 }
 import { OrderStatus } from 'src/order/entities/order.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  InvoiceCreatedEvent,
+  InvoicePaidEvent,
+  InvoiceCancelledEvent,
+} from 'src/audit/events/invoice-events';
 
 const VAT_RATE = 0.15; // 15%
 const NHIL_RATE = 0.025; // 2.5%
@@ -52,6 +58,7 @@ export class InvoiceService {
     private readonly businessService: BusinessService,
     private readonly customerService: CustomerService,
     private readonly orderService: OrderService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private async verifyBusinessOwnership(params: IVerifyOwnershipParams) {
@@ -173,6 +180,8 @@ export class InvoiceService {
     // Fetch customer snapshot
     const customer = await this.customerService.findOne({
       customerId: params.customerId,
+      ownerId: params.ownerId,
+      businessId: params.businessId,
     });
 
     // Create invoice
@@ -219,6 +228,14 @@ export class InvoiceService {
         'business',
       ],
     });
+
+    this.eventEmitter.emit('invoice.created', {
+      invoiceId: invoice.id,
+      customerId: params.customerId,
+      totalAmount: totalAmount,
+      createdBy: params.ownerId,
+      timestamp: new Date(),
+    } as InvoiceCreatedEvent);
 
     return completeInvoice;
   }
@@ -378,7 +395,20 @@ export class InvoiceService {
       invoice.status = InvoiceStatus.PARTIALLY_PAID;
     }
 
-    return await this.invoiceRepository.save(invoice);
+    const savedInvoice = await this.invoiceRepository.save(invoice);
+
+    if (savedInvoice.status === InvoiceStatus.PAID) {
+      this.eventEmitter.emit('invoice.paid', {
+        invoiceId: savedInvoice.id,
+        customerId: savedInvoice.customerId,
+        amountPaid: totalAmountPaid,
+        paymentMethod: params.paymentMethod,
+        paidBy: params.ownerId,
+        timestamp: new Date(),
+      } as InvoicePaidEvent);
+    }
+
+    return savedInvoice;
   }
 
   async updateInvoiceStatus(params: IUpdateInvoiceStatusParams) {
@@ -399,7 +429,18 @@ export class InvoiceService {
     }
 
     invoice.status = params.status;
-    return await this.invoiceRepository.save(invoice);
+    const saved = await this.invoiceRepository.save(invoice);
+
+    if (saved.status === InvoiceStatus.CANCELLED) {
+      this.eventEmitter.emit('invoice.cancelled', {
+        invoiceId: saved.id,
+        customerId: saved.customerId,
+        cancelledBy: params.ownerId,
+        timestamp: new Date(),
+      } as InvoiceCancelledEvent);
+    }
+
+    return saved;
   }
 
   /**
