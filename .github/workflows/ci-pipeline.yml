@@ -14,10 +14,10 @@ on:
 jobs:
   checks:
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name != 'main' && github.ref_name != 'dev')
-    uses: ./reusable-checks.yml
+    uses: ./.github/workflows/reusable-checks.yml
     secrets: inherit
 
   deploy:
     if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev')
-    uses: ./reusable-deploy.yml
+    uses: ./.github/workflows/reusable-deploy.yml
     secrets: inherit
