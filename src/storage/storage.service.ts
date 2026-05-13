@@ -5,7 +5,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 @Injectable()
 export class StorageService {
@@ -26,7 +26,8 @@ export class StorageService {
   }
 
   async uploadImageToBucket(buffer: Buffer, key: string, mimeType: string) {
-    const finalKey = `${key}${uuidv4()}.${mimeType.split('/')[1]}`;
+    const uid = nanoid(12);
+    const finalKey = `${key}${uid}.${mimeType.split('/')[1]}`;
 
     const command = new PutObjectCommand({
       Bucket: this.bucketName,

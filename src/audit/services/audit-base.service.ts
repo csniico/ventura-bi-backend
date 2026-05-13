@@ -1,19 +1,19 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { SqsService } from '@ssut/nestjs-sqs';
+import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { Audit } from '../entities/audit.entity';
 import { AUDIT_REPOSITORY } from 'src/constants';
 import { AuditAction } from '../enums/audit-action.enum';
 import { AuditEntity } from '../enums/audit-entity.enum';
-import { AuditJobPayload } from '../audit.processor';
+import { AuditJobPayload } from '../interfaces/audit-job-payload.interface';
 
 @Injectable()
 export class AuditBaseService {
   private readonly logger = new Logger(AuditBaseService.name);
 
   constructor(
-    @InjectQueue('audit') private readonly auditQueue: Queue,
+    private readonly sqsService: SqsService,
     @Inject(AUDIT_REPOSITORY)
     private readonly auditRepository: Repository<Audit>,
   ) {}
@@ -23,9 +23,9 @@ export class AuditBaseService {
    */
   async queueAuditLog(data: AuditJobPayload): Promise<void> {
     try {
-      await this.auditQueue.add('audit-log', data, {
-        removeOnComplete: true,
-        removeOnFail: false,
+      await this.sqsService.send('audit-producer', {
+        id: randomUUID(),
+        body: JSON.stringify(data),
       });
       this.logger.debug(
         `Queued audit log: ${data.action} on ${data.entity} (${data.entityId})`,

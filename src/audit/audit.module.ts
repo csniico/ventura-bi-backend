@@ -3,8 +3,6 @@ import { AuditService } from './audit.service';
 import { AuditController } from './audit.controller';
 import { auditProviders } from './audit.providers';
 import { DatabaseModule } from 'src/database/database.module';
-import { BullModule } from '@nestjs/bullmq';
-import { AuditProcessor } from './audit.processor';
 import {
   AuditBaseService,
   AuthAuditService,
@@ -13,20 +11,23 @@ import {
   InvoiceAuditService,
   CustomerAuditService,
 } from './services';
+import { AuditConsumer } from 'src/audit/audit.consumer';
+import { AuditDlqService } from './audit-dlq.service';
 
 @Module({
-  imports: [DatabaseModule, BullModule.registerQueue({ name: 'audit' })],
+  imports: [DatabaseModule],
   controllers: [AuditController],
   providers: [
     ...auditProviders,
     AuditService,
-    AuditProcessor,
     AuditBaseService,
     AuthAuditService,
     UserAuditService,
     OrderAuditService,
     InvoiceAuditService,
     CustomerAuditService,
+    AuditConsumer,
+    AuditDlqService,
   ],
   exports: [AuditService, AuditBaseService],
 })

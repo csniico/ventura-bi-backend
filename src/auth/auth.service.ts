@@ -24,7 +24,7 @@ import { AuthLoginEvent, AuthLogoutEvent } from 'src/audit/events/auth-events';
 @Injectable()
 export class AuthService {
   private logger = new Logger(AuthService.name);
-  private csrfDomain: string | null;
+  private readonly csrfDomain: string | null;
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,

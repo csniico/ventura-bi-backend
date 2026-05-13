@@ -175,9 +175,22 @@ The `audits` table tracks:
 
 ## Queue Processing
 
-Audit logs are processed asynchronously via BullMQ:
+Audit logs are processed asynchronously via SQS:
 
-- Queue name: `audit`
-- Jobs are automatically removed after completion
-- Failed jobs are retained for debugging
-- Redis-backed for reliability
+- Producer name: `audit-producer`
+- Consumer name: `audit-consumer`
+- Payload format: raw JSON `AuditJobPayload`
+- Delivery model: at-least-once (consumer failures throw and use retry/DLQ)
+
+### DLQ Operations
+
+Use audit endpoints to inspect and replay failed messages:
+
+- `GET /audit/dlq?maxMessages=10` - preview current DLQ messages
+- `POST /audit/dlq/replay` - replay messages sequentially
+
+Replay behavior:
+
+- Processes one message at a time, in order
+- Stops on the first replay failure
+- Returns per-message status (`replayed`, `failed`, `skipped`)

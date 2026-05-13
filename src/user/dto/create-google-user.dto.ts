@@ -3,11 +3,11 @@ import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 export class CreateGoogleUserDto {
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsNotEmpty()
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @IsOptional()
   @IsString()
@@ -19,7 +19,7 @@ export class CreateGoogleUserDto {
 
   @IsNotEmpty()
   @IsString()
-  googleId?: string;
+  googleId!: string;
 
   @IsOptional()
   @IsString()

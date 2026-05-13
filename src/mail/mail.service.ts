@@ -2,39 +2,77 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MAILER_REPOSITORY } from 'src/constants';
 import { Repository } from 'typeorm';
 import { customAlphabet } from 'nanoid';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { Mail, MailStatus } from 'src/mail/entities/mail.entity';
-import { VERIFICATION_EMAIL_SUBJECT } from 'src/mail/templates/email-verification-template';
+import {
+  EmailVerificationTemplate,
+  VERIFICATION_EMAIL_SUBJECT,
+} from 'src/mail/templates/email-verification-template';
 import { VerifyCodeDto } from 'src/mail/dto/verify-code.dto';
-import { WELCOME_EMAIL_SUBJECT } from 'src/mail/templates/welcome-template';
+import {
+  WELCOME_EMAIL_SUBJECT,
+  WelcomeEmailTemplate,
+} from 'src/mail/templates/welcome-template';
 import { SendMailDto } from 'src/mail/dto/send-mail.dto';
-import { ServiceQueueJobPayload } from './types/mail';
+import { Resend } from 'resend';
+import {
+  ALREADY_REGISTERED_SUBJECT,
+  ExistingUserSignupTemplate,
+} from 'src/mail/templates/existing-user-signup-template';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
+  private resend = new Resend(process.env.RESEND_API_KEY);
+  private readonly RESEND_FROM_EMAIL = 'Ventura <nii@support.csniico.com>';
   constructor(
     @Inject(MAILER_REPOSITORY)
     private mailRepository: Repository<Mail>,
-    @InjectQueue('mail') private readonly mailQueue: Queue,
+    private readonly configService: ConfigService,
   ) {}
 
+  private generateEmailVerificationTemplate(
+    firstName: string,
+    verificationCode: string,
+    expirationMinutes: number,
+  ) {
+    return EmailVerificationTemplate(
+      firstName,
+      verificationCode,
+      expirationMinutes,
+    );
+  }
+
+  private generateExistingUserSignUpTemplate(firstName: string) {
+    const loginUrl = this.configService.get<string>('APP_LOGIN_URL');
+    const resetUrl = this.configService.get<string>('APP_RESET_PASSWORD_URL');
+    return ExistingUserSignupTemplate(firstName, loginUrl, resetUrl);
+  }
+
+  private generateWelcomeEmailTemplate(firstName: string) {
+    return WelcomeEmailTemplate(firstName);
+  }
+
   async sendEmail(dto: SendMailDto) {
+    const { data, error } = await this.resend.emails.send({
+      to: dto.recipients.toString(),
+      from: this.RESEND_FROM_EMAIL,
+      subject: dto.subject,
+      html: dto.htmlBody,
+    });
+
+    if (error) {
+      this.logger.error(error);
+    }
     const mail = this.mailRepository.create({
       to: dto.recipients.toString(),
       subject: dto.subject,
-      from: 'system',
+      from: this.RESEND_FROM_EMAIL,
       htmlBody: dto.htmlBody,
+      status: MailStatus.SENT,
     });
-
     await this.mailRepository.save(mail);
-    return await this.mailQueue.add('send-email', {
-      mailId: mail.shortId,
-      to: dto.recipients,
-      subject: dto.subject,
-      htmlBody: dto.htmlBody,
-    });
+    return data;
   }
 
   async getMailById(id: string) {
@@ -82,21 +120,39 @@ export class MailService {
     status: 'NEW' | 'EXISTING';
   }) {
     const verificationCode = this.generateEmailVerificationCode();
+    const htmlBody =
+      status === 'NEW'
+        ? this.generateEmailVerificationTemplate(
+            firstName,
+            verificationCode,
+            10,
+          )
+        : this.generateExistingUserSignUpTemplate(firstName);
+
+    const { data, error } = await this.resend.emails.send({
+      from: this.RESEND_FROM_EMAIL,
+      to: email,
+      subject:
+        status === 'NEW'
+          ? VERIFICATION_EMAIL_SUBJECT
+          : ALREADY_REGISTERED_SUBJECT,
+      html: htmlBody!,
+    });
+
+    this.logger.error(error);
+    this.logger.log(data);
 
     const mail = this.mailRepository.create({
       to: email,
-      subject: VERIFICATION_EMAIL_SUBJECT,
+      subject:
+        status === 'NEW'
+          ? VERIFICATION_EMAIL_SUBJECT
+          : ALREADY_REGISTERED_SUBJECT,
       verificationCode: verificationCode,
+      htmlBody: htmlBody!,
+      status: MailStatus.SENT,
     });
     await this.mailRepository.save(mail);
-
-    await this.mailQueue.add('verification', {
-      mailId: mail.shortId, //shortId of the mail entity
-      email,
-      firstName,
-      code: verificationCode,
-      status: status,
-    } as ServiceQueueJobPayload);
 
     return {
       message: 'Verification code sent',
@@ -125,16 +181,23 @@ export class MailService {
     if (!mail) {
       return false;
     }
+    const htmlBody = this.generateWelcomeEmailTemplate(dto.firstName);
+    const { data, error } = await this.resend.emails.send({
+      from: this.RESEND_FROM_EMAIL,
+      to: dto.email,
+      subject: WELCOME_EMAIL_SUBJECT,
+      html: htmlBody,
+    });
+
+    if (error) {
+      this.logger.error(error);
+    }
     const newMail = this.mailRepository.create({
       to: dto.email,
       subject: WELCOME_EMAIL_SUBJECT,
     });
-    const savedMail = await this.mailRepository.save(newMail);
-    await this.mailQueue.add('welcome', {
-      mailId: savedMail.shortId,
-      email: dto.email,
-      firstName: dto.firstName,
-    });
+    await this.mailRepository.save(newMail);
+    this.logger.log(data);
     return true;
   }
 
