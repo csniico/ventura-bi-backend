@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import { LoginDto } from './dto/login.dto';
@@ -202,7 +201,10 @@ export class AuthService {
       firstName: user.firstName,
     });
     if (!isVerified) {
-      throw new UnauthorizedException('Invalid verification credentials');
+      // A wrong/stale verification code is a client input error, not a session
+      // (401) failure. Returning 400 keeps clients from mistaking it for an
+      // expired session and triggering a token refresh.
+      throw new BadRequestException('Invalid verification credentials');
     }
     return await this.userService.setEmailVerificationState(
       user.id,
