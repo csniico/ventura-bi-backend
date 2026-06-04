@@ -30,7 +30,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
-  private frontendRedirectUrl: string | null;
+  private readonly frontendRedirectUrl: string | null;
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,

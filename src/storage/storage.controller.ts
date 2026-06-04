@@ -9,8 +9,6 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { FileInterceptor } from '@nestjs/platform-express';
 import path from 'path';
 import { FileValidator } from 'src/storage/validators/file-validator';
@@ -24,10 +22,7 @@ const TEMP_DEST = path.resolve('/tmp');
 export class StorageController {
   private readonly logger = new Logger(StorageController.name);
 
-  constructor(
-    @InjectQueue('assets') private readonly assetsQueue: Queue,
-    private readonly storageService: StorageService,
-  ) {}
+  constructor(private readonly storageService: StorageService) {}
 
   private _validateUploadedFile(file: Express.Multer.File) {
     if (!file) {
